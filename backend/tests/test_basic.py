@@ -1,14 +1,42 @@
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
+
 from app.main import app
+from app.database import Base, get_db
+
+# StaticPool garante que a mesma conexão in-memory é reutilizada em todos os testes
+TEST_DATABASE_URL = "sqlite://"
+test_engine = create_engine(
+    TEST_DATABASE_URL,
+    connect_args={"check_same_thread": False},
+    poolclass=StaticPool,
+)
+TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
+
+Base.metadata.create_all(bind=test_engine)
+
+
+def override_get_db():
+    db = TestingSessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+app.dependency_overrides[get_db] = override_get_db
 
 client = TestClient(app)
+
 
 def test_root_returns_200():
     response = client.get("/")
     assert response.status_code == 200
-    data = response.json()
-    assert data["message"] == "Agência de Empregos API"
+    assert response.json()["message"] == "Agência de Empregos API"
+
 
 def test_create_empresa():
     response = client.post("/empresas/", json={
@@ -24,13 +52,15 @@ def test_create_empresa():
     assert data["nome"] == "Empresa Teste"
     assert "id" in data
 
+
 def test_list_empresas():
     response = client.get("/empresas/")
     assert response.status_code == 200
     assert isinstance(response.json(), list)
+    assert len(response.json()) >= 1
+
 
 def test_create_vaga():
-    # First create an empresa to reference
     emp_response = client.post("/empresas/", json={
         "nome": "Empresa Vaga Teste",
         "cnpj": "88.888.888/0001-88",
@@ -53,38 +83,20 @@ def test_create_vaga():
         "empresa_id": empresa_id
     })
     assert response.status_code == 200
-    data = response.json()
-    assert data["titulo"] == "Dev Backend"
+    assert response.json()["titulo"] == "Dev Backend"
 
-def test_list_vagas_after_seed():
-    # Seed data inline for test isolation
-    from app.database import SessionLocal, engine
-    from app.database import Base
-    from app import models
-    from datetime import date
 
-    Base.metadata.create_all(bind=engine)
-    db = SessionLocal()
-    try:
-        if db.query(models.Empresa).filter(models.Empresa.cnpj == "11.111.111/0001-11").first() is None:
-            emp = models.Empresa(nome="Seed Test Co", cnpj="11.111.111/0001-11", setor="TI", cidade="SP", estado="SP")
-            db.add(emp)
-            db.commit()
-            db.refresh(emp)
-            vaga = models.Vaga(titulo="QA Engineer", local="SP", salario=7000.0, modalidade=models.ModalidadeEnum.remoto, tipo_contrato=models.TipoContratoEnum.CLT, empresa_id=emp.id, data_publicacao=date.today())
-            db.add(vaga)
-            db.commit()
-    finally:
-        db.close()
-
+def test_list_vagas():
     response = client.get("/vagas/")
     assert response.status_code == 200
+    assert isinstance(response.json(), list)
     assert len(response.json()) >= 1
+
 
 def test_create_candidato():
     response = client.post("/candidatos/", json={
         "nome": "João Teste",
-        "email": "joao.teste.unique@email.com",
+        "email": "joao.teste@email.com",
         "telefone": "(11) 91234-5678",
         "cidade": "Campinas",
         "estado": "SP"

@@ -1,0 +1,22 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-agencia_empregos}
+      POSTGRES_USER: ${POSTGRES_USER:-agencia_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-agencia_pass}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-agencia_user} -d ${POSTGRES_DB:-agencia_empregos}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
