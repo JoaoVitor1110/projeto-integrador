@@ -3,76 +3,59 @@ from typing import Optional, List
 from pydantic import BaseModel, ConfigDict
 from app.models import ModalidadeEnum, TipoContratoEnum, PublicoAlvoEnum, StatusVagaEnum, NivelRequisitoEnum, StatusCandidaturaEnum
 
-
+# Empresa
 class EmpresaCreate(BaseModel):
     nome: str
     cnpj: str
-    setor: Optional[str] = None
+    setor: str
     descricao: Optional[str] = None
-    cidade: Optional[str] = None
-    estado: Optional[str] = None
-
+    cidade: str
+    estado: str
 
 class EmpresaResponse(EmpresaCreate):
     model_config = ConfigDict(from_attributes=True)
     id: int
 
-
+# Beneficio
 class BeneficioCreate(BaseModel):
     nome: str
     descricao: Optional[str] = None
-
 
 class BeneficioResponse(BeneficioCreate):
     model_config = ConfigDict(from_attributes=True)
     id: int
 
-
+# Requisito
 class RequisitoCreate(BaseModel):
     descricao: str
     nivel: NivelRequisitoEnum
-
 
 class RequisitoResponse(RequisitoCreate):
     model_config = ConfigDict(from_attributes=True)
     id: int
 
-
+# Vaga
 class VagaCreate(BaseModel):
     titulo: str
-    local: Optional[str] = None
+    local: str
     salario: Optional[float] = None
-    modalidade: Optional[ModalidadeEnum] = None
+    modalidade: ModalidadeEnum
     horario: Optional[str] = None
-    tipo_contrato: Optional[TipoContratoEnum] = None
-    publico_alvo: Optional[PublicoAlvoEnum] = None
+    tipo_contrato: TipoContratoEnum
+    publico_alvo: PublicoAlvoEnum = PublicoAlvoEnum.ambos
     vaga_pcd: bool = False
     status: StatusVagaEnum = StatusVagaEnum.aberta
     data_publicacao: Optional[date] = None
     empresa_id: int
-    beneficio_ids: List[int] = []
-    requisito_ids: List[int] = []
 
-
-class VagaResponse(BaseModel):
+class VagaResponse(VagaCreate):
     model_config = ConfigDict(from_attributes=True)
     id: int
-    titulo: str
-    local: Optional[str] = None
-    salario: Optional[float] = None
-    modalidade: Optional[ModalidadeEnum] = None
-    horario: Optional[str] = None
-    tipo_contrato: Optional[TipoContratoEnum] = None
-    publico_alvo: Optional[PublicoAlvoEnum] = None
-    vaga_pcd: bool
-    status: StatusVagaEnum
-    data_publicacao: Optional[date] = None
-    empresa_id: int
-    empresa: Optional[EmpresaResponse] = None
+    empresa: EmpresaResponse
     beneficios: List[BeneficioResponse] = []
     requisitos: List[RequisitoResponse] = []
 
-
+# Candidato
 class CandidatoCreate(BaseModel):
     nome: str
     email: str
@@ -81,19 +64,19 @@ class CandidatoCreate(BaseModel):
     estado: Optional[str] = None
     data_nascimento: Optional[date] = None
 
-
 class CandidatoResponse(CandidatoCreate):
     model_config = ConfigDict(from_attributes=True)
     id: int
 
-
+# Candidatura
 class CandidaturaCreate(BaseModel):
     candidato_id: int
     vaga_id: int
     data_candidatura: Optional[date] = None
     status: StatusCandidaturaEnum = StatusCandidaturaEnum.pendente
 
-
 class CandidaturaResponse(CandidaturaCreate):
     model_config = ConfigDict(from_attributes=True)
     id: int
+    candidato: CandidatoResponse
+    vaga: VagaResponse

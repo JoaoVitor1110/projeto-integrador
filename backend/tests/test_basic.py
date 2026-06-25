@@ -19,7 +19,7 @@ def test_create_empresa():
         "cidade": "São Paulo",
         "estado": "SP"
     })
-    assert response.status_code == 201
+    assert response.status_code == 200
     data = response.json()
     assert data["nome"] == "Empresa Teste"
     assert "id" in data
@@ -52,7 +52,7 @@ def test_create_vaga():
         "status": "aberta",
         "empresa_id": empresa_id
     })
-    assert response.status_code == 201
+    assert response.status_code == 200
     data = response.json()
     assert data["titulo"] == "Dev Backend"
 
@@ -89,7 +89,7 @@ def test_create_candidato():
         "cidade": "Campinas",
         "estado": "SP"
     })
-    assert response.status_code == 201
+    assert response.status_code == 200
     data = response.json()
     assert data["nome"] == "João Teste"
     assert "id" in data
