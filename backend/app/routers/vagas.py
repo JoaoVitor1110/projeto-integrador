@@ -1,16 +1,24 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from app.database import get_db
-from app import models
-from app.schemas import VagaCreate, VagaResponse
-from app.models import ModalidadeEnum, TipoContratoEnum, StatusVagaEnum
 from datetime import date
+
+from app.database import get_db
+from app import models, auth
+from app.schemas import VagaCreate, VagaResponse
+from app.models import ModalidadeEnum, TipoContratoEnum, StatusVagaEnum, PerfilEnum
 
 router = APIRouter()
 
+_ESCRITORES = Depends(auth.exigir_perfil(PerfilEnum.admin, PerfilEnum.recrutador))
+
+
 @router.post("/", response_model=VagaResponse)
-def create_vaga(vaga: VagaCreate, db: Session = Depends(get_db)):
+def create_vaga(
+    vaga: VagaCreate,
+    db: Session = Depends(get_db),
+    _: models.Usuario = _ESCRITORES,
+):
     data = vaga.model_dump()
     if data.get("data_publicacao") is None:
         data["data_publicacao"] = date.today()
@@ -19,6 +27,7 @@ def create_vaga(vaga: VagaCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_vaga)
     return db_vaga
+
 
 @router.get("/", response_model=List[VagaResponse])
 def list_vagas(
@@ -39,9 +48,40 @@ def list_vagas(
         query = query.filter(models.Vaga.status == status)
     return query.all()
 
+
 @router.get("/{id}", response_model=VagaResponse)
 def get_vaga(id: int, db: Session = Depends(get_db)):
     vaga = db.query(models.Vaga).filter(models.Vaga.id == id).first()
     if not vaga:
         raise HTTPException(status_code=404, detail="Vaga não encontrada")
     return vaga
+
+
+@router.put("/{id}", response_model=VagaResponse)
+def update_vaga(
+    id: int,
+    vaga: VagaCreate,
+    db: Session = Depends(get_db),
+    _: models.Usuario = _ESCRITORES,
+):
+    db_vaga = db.query(models.Vaga).filter(models.Vaga.id == id).first()
+    if not db_vaga:
+        raise HTTPException(status_code=404, detail="Vaga não encontrada")
+    for k, v in vaga.model_dump().items():
+        setattr(db_vaga, k, v)
+    db.commit()
+    db.refresh(db_vaga)
+    return db_vaga
+
+
+@router.delete("/{id}", status_code=204)
+def delete_vaga(
+    id: int,
+    db: Session = Depends(get_db),
+    _: models.Usuario = _ESCRITORES,
+):
+    db_vaga = db.query(models.Vaga).filter(models.Vaga.id == id).first()
+    if not db_vaga:
+        raise HTTPException(status_code=404, detail="Vaga não encontrada")
+    db.delete(db_vaga)
+    db.commit()

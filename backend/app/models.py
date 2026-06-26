@@ -4,6 +4,21 @@ from sqlalchemy import Column, Integer, String, Float, Boolean, Date, Enum, Fore
 from sqlalchemy.orm import relationship
 from app.database import Base
 
+
+class PerfilEnum(str, enum.Enum):
+    admin = "admin"
+    recrutador = "recrutador"
+    visualizador = "visualizador"
+
+
+class Usuario(Base):
+    __tablename__ = "usuarios"
+    id = Column(Integer, primary_key=True, index=True)
+    nome = Column(String, nullable=False)
+    email = Column(String, unique=True, nullable=False, index=True)
+    senha_hash = Column(String, nullable=False)
+    perfil = Column(Enum(PerfilEnum), nullable=False, default=PerfilEnum.visualizador)
+
 class ModalidadeEnum(str, enum.Enum):
     presencial = "presencial"
     remoto = "remoto"
