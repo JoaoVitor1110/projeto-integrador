@@ -405,6 +405,7 @@ def _form_nova_vaga():
             tipo_contrato = st.selectbox("Tipo de contrato", ["CLT", "PJ", "temporario", "estagio"])
             publico_alvo  = st.selectbox("Público-alvo", ["ambos", "masculino", "feminino"])
             horario       = st.text_input("Horário")
+        descricao = st.text_area("Descrição da vaga", placeholder="Descreva as responsabilidades, o que a pessoa vai fazer no dia a dia...")
         vaga_pcd = st.checkbox("Vaga PcD")
         salvar = st.form_submit_button("Salvar vaga", type="primary")
 
@@ -413,7 +414,8 @@ def _form_nova_vaga():
             st.error("Preencha título, local e empresa.")
             return
         dados = {
-            "titulo": titulo, "local": local, "salario": salario or None,
+            "titulo": titulo, "local": local, "descricao": descricao or None,
+            "salario": salario or None,
             "modalidade": modalidade, "tipo_contrato": tipo_contrato,
             "publico_alvo": publico_alvo, "horario": horario or None,
             "vaga_pcd": vaga_pcd, "status": "aberta",
@@ -471,6 +473,12 @@ def tela_detalhe(vaga_id):
 
     st.divider()
 
+    # Descrição
+    if vaga.get("descricao"):
+        st.markdown("**📝 Sobre a vaga**")
+        st.markdown(vaga["descricao"])
+        st.divider()
+
     col_ben, col_req = st.columns(2)
     with col_ben:
         st.markdown("**🎁 Benefícios**")
@@ -492,6 +500,47 @@ def tela_detalhe(vaga_id):
     st.divider()
 
     if pode_escrever:
+        # Candidatos que se inscreveram nessa vaga
+        st.markdown("### 👥 Candidatos Inscritos")
+        candidaturas_vaga = api_get("/candidaturas/", params={"vaga_id": vaga_id})
+        if not candidaturas_vaga:
+            st.info("Nenhum candidato inscrito ainda.")
+        else:
+            STATUS_COR = {"pendente": "#F9A825", "em_analise": "#1565C0", "aprovado": "#2E7D32", "reprovado": "#B71C1C"}
+            STATUS_LABEL = {"pendente": "⏳ Pendente", "em_analise": "🔍 Em análise", "aprovado": "✅ Aprovado", "reprovado": "❌ Reprovado"}
+            st.caption(f"{len(candidaturas_vaga)} candidato(s) inscrito(s)")
+            for cand in candidaturas_vaga:
+                c = cand.get("candidato", {})
+                status = cand.get("status", "pendente")
+                cor = STATUS_COR.get(status, "#555")
+                with st.container(border=True):
+                    col_info, col_status, col_acao = st.columns([3, 2, 2])
+                    with col_info:
+                        st.markdown(f"**{c.get('nome', '—')}**")
+                        st.caption(f"✉️ {c.get('email', '—')}")
+                        if c.get("telefone"):
+                            st.caption(f"📞 {c['telefone']}")
+                        if c.get("cidade"):
+                            st.caption(f"📍 {c['cidade']}/{c.get('estado','')}")
+                    with col_status:
+                        st.markdown(f"<span style='background:{cor};color:white;padding:4px 10px;border-radius:12px;font-size:12px'>{STATUS_LABEL.get(status, status)}</span>", unsafe_allow_html=True)
+                        st.caption(f"📅 {cand.get('data_candidatura', '')}")
+                    with col_acao:
+                        novo = st.selectbox(
+                            "Atualizar",
+                            ["pendente", "em_analise", "aprovado", "reprovado"],
+                            index=["pendente", "em_analise", "aprovado", "reprovado"].index(status),
+                            key=f"sel_status_{cand['id']}",
+                            format_func=lambda x: STATUS_LABEL.get(x, x),
+                            label_visibility="collapsed",
+                        )
+                        if st.button("Salvar", key=f"btn_status_{cand['id']}", use_container_width=True):
+                            r = api_put(f"/candidaturas/{cand['id']}/status", json={"status": novo})
+                            if r:
+                                st.success("Status atualizado!")
+                                st.rerun()
+
+        st.divider()
         st.markdown("**⚙️ Ações**")
         col_enc, col_del = st.columns(2)
         novo_status = "encerrada" if vaga["status"] == "aberta" else "aberta"
@@ -499,7 +548,7 @@ def tela_detalhe(vaga_id):
         with col_enc:
             if st.button(label_btn, use_container_width=True):
                 dados = {k: vaga[k] for k in [
-                    "titulo","local","salario","modalidade","horario","tipo_contrato",
+                    "titulo","local","descricao","salario","modalidade","horario","tipo_contrato",
                     "publico_alvo","vaga_pcd","empresa_id","quantidade_vagas",
                     "data_publicacao","data_abertura","data_fechamento"
                 ] if k in vaga}
@@ -522,6 +571,7 @@ def tela_detalhe(vaga_id):
         candidatos = api_get("/candidatos/")
         usuario = st.session_state.usuario
         candidato_id = None
+        ja_inscrito = False
         if candidatos:
             for c in candidatos:
                 if c.get("email") == usuario.get("email"):
@@ -529,13 +579,21 @@ def tela_detalhe(vaga_id):
                     break
 
         if candidato_id:
-            if st.button("✅ Candidatar-se a esta vaga", use_container_width=True, type="primary"):
-                resp = api_post("/candidaturas/", json={
-                    "candidato_id": candidato_id,
-                    "vaga_id": vaga_id,
-                })
-                if resp:
-                    st.success("Candidatura enviada com sucesso!")
+            # Verifica se já está inscrito
+            candidaturas_existentes = api_get("/candidaturas/", params={"vaga_id": vaga_id}) or []
+            ja_inscrito = any(c.get("candidato_id") == candidato_id for c in candidaturas_existentes)
+
+            if ja_inscrito:
+                st.success("✅ Você já está inscrito nessa vaga!")
+            else:
+                if st.button("✅ Candidatar-se a esta vaga", use_container_width=True, type="primary"):
+                    resp = api_post("/candidaturas/", json={
+                        "candidato_id": candidato_id,
+                        "vaga_id": vaga_id,
+                    })
+                    if resp:
+                        st.success("Candidatura enviada com sucesso!")
+                        st.rerun()
         else:
             st.info("Complete seu perfil de candidato para se candidatar.")
             if st.button("📝 Completar perfil", use_container_width=True, type="primary"):
@@ -705,7 +763,7 @@ def tela_dashboard():
             vagas_antigas.append((v, dias))
 
     vagas_antigas.sort(key=lambda x: -x[1])
-    alertas = [(v, d) for v, d in vagas_antigas if d >= 30]
+    alertas = [(v, d) for v, d in vagas_antigas if d >= 60][:10]
 
     if alertas:
         for vaga, dias in alertas:
@@ -1029,6 +1087,7 @@ def tela_editar_vaga(vaga_id):
             publico_alvo  = st.selectbox("Público-alvo", publicos,
                                          index=publicos.index(vaga.get("publico_alvo", "ambos")))
             horario = st.text_input("Horário", value=vaga.get("horario") or "")
+        descricao = st.text_area("Descrição da vaga", value=vaga.get("descricao") or "")
         vaga_pcd = st.checkbox("Vaga PcD", value=vaga.get("vaga_pcd", False))
         status   = st.selectbox("Status", ["aberta", "encerrada"],
                                  index=0 if vaga["status"] == "aberta" else 1)
@@ -1036,7 +1095,8 @@ def tela_editar_vaga(vaga_id):
 
     if salvar:
         dados = {
-            "titulo": titulo, "local": local, "salario": salario or None,
+            "titulo": titulo, "local": local, "descricao": descricao or None,
+            "salario": salario or None,
             "modalidade": modalidade, "tipo_contrato": tipo_contrato,
             "publico_alvo": publico_alvo, "horario": horario or None,
             "vaga_pcd": vaga_pcd, "status": status,

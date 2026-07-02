@@ -38,6 +38,7 @@ class RequisitoResponse(RequisitoCreate):
 class VagaCreate(BaseModel):
     titulo: str
     local: str
+    descricao: Optional[str] = None
     salario: Optional[float] = None
     modalidade: ModalidadeEnum
     horario: Optional[str] = None

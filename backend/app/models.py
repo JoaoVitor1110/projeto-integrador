@@ -93,6 +93,7 @@ class Vaga(Base):
     id = Column(Integer, primary_key=True, index=True)
     titulo = Column(String, nullable=False)
     local = Column(String, nullable=False)
+    descricao = Column(Text, nullable=True)
     salario = Column(Float)
     modalidade = Column(Enum(ModalidadeEnum), nullable=False)
     horario = Column(String)
