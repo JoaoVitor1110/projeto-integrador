@@ -1276,14 +1276,6 @@ def tela_assistente():
         st.warning("Configure a secret `GEMINI_API_KEY` no Streamlit Cloud para usar o assistente.")
         return
 
-    with st.expander("🔧 Modelos disponíveis (debug)", expanded=False):
-        try:
-            r = requests.get(f"https://generativelanguage.googleapis.com/v1/models?key={api_key}", timeout=10)
-            modelos = [m["name"] for m in r.json().get("models", []) if "generateContent" in m.get("supportedGenerationMethods", [])]
-            st.write(modelos)
-        except Exception as e:
-            st.write(f"Erro: {e}")
-
     if "chat_historico" not in st.session_state:
         st.session_state.chat_historico = []
 
@@ -1317,7 +1309,7 @@ Para perguntas gerais sobre carreira, mercado de trabalho, currículo, entrevist
                 contents.append({"role": "user", "parts": [{"text": pergunta}]})
 
                 try:
-                    url = f"https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key={api_key}"
+                    url = f"https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash-lite:generateContent?key={api_key}"
                     payload = {"contents": contents, "generationConfig": {"maxOutputTokens": 800, "temperature": 0.7}}
                     r = requests.post(url, json=payload, timeout=30)
                     r.raise_for_status()
