@@ -101,23 +101,53 @@ PERFIL_LABEL     = {"admin": "👑 Admin", "recrutador": "📋 Recrutador", "vis
 def tela_login():
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        st.markdown("## 💼 Agência de Empregos")
-        st.markdown("### Acesse sua conta")
+        st.markdown("""
+        <div style="text-align:center;padding:20px 0 10px">
+          <div style="font-size:48px">💼</div>
+          <div style="font-size:28px;font-weight:700;color:#1565C0">Agência de Empregos</div>
+          <div style="color:#666;margin-top:4px">Plataforma de gestão de vagas</div>
+        </div>
+        """, unsafe_allow_html=True)
 
-        with st.form("form_login"):
-            email = st.text_input("Email")
-            senha = st.text_input("Senha", type="password")
-            entrar = st.form_submit_button("Entrar", use_container_width=True, type="primary")
+        aba_login, aba_cadastro = st.tabs(["🔑 Entrar", "📝 Criar conta"])
 
-        if entrar:
-            if not email or not senha:
-                st.warning("Preencha email e senha.")
-            else:
-                data = api_post("/auth/login", form={"username": email, "password": senha})
-                if data:
-                    st.session_state.token = data["access_token"]
-                    st.session_state.usuario = data["usuario"]
-                    st.rerun()
+        with aba_login:
+            with st.form("form_login"):
+                email = st.text_input("Email", placeholder="seu@email.com")
+                senha = st.text_input("Senha", type="password", placeholder="••••••••")
+                entrar = st.form_submit_button("Entrar", use_container_width=True, type="primary")
+            if entrar:
+                if not email or not senha:
+                    st.warning("Preencha email e senha.")
+                else:
+                    data = api_post("/auth/login", form={"username": email, "password": senha})
+                    if data:
+                        st.session_state.token = data["access_token"]
+                        st.session_state.usuario = data["usuario"]
+                        st.rerun()
+
+        with aba_cadastro:
+            st.caption("Crie sua conta gratuitamente para visualizar e se candidatar às vagas.")
+            with st.form("form_cadastro"):
+                nome_c  = st.text_input("Nome completo *", placeholder="João Silva")
+                email_c = st.text_input("Email *", placeholder="seu@email.com")
+                senha_c = st.text_input("Senha *", type="password", placeholder="Mínimo 6 caracteres")
+                senha2  = st.text_input("Confirmar senha *", type="password")
+                cadastrar = st.form_submit_button("Criar conta", use_container_width=True, type="primary")
+            if cadastrar:
+                if not nome_c or not email_c or not senha_c:
+                    st.error("Preencha todos os campos.")
+                elif senha_c != senha2:
+                    st.error("As senhas não coincidem.")
+                elif len(senha_c) < 6:
+                    st.error("A senha deve ter pelo menos 6 caracteres.")
+                else:
+                    data = api_post("/auth/registro", json={"nome": nome_c, "email": email_c, "senha": senha_c, "perfil": "visualizador"})
+                    if data:
+                        st.session_state.token = data["access_token"]
+                        st.session_state.usuario = data["usuario"]
+                        st.success(f"Bem-vindo(a), {nome_c}!")
+                        st.rerun()
 
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
@@ -141,6 +171,11 @@ def _sidebar():
         if pode_escrever:
             if st.button("📊 Dashboard", use_container_width=True):
                 st.session_state.pagina = "dashboard"
+                st.rerun()
+
+        if perfil == "visualizador":
+            if st.button("📋 Minhas Candidaturas", use_container_width=True):
+                st.session_state.pagina = "candidaturas"
                 st.rerun()
 
         if perfil == "admin":
@@ -364,12 +399,12 @@ def tela_detalhe(vaga_id):
         else:
             st.caption("Não informado")
 
+    st.divider()
+
     if pode_escrever:
-        st.divider()
         st.markdown("### ⚙️ Ações")
         col_enc, col_del = st.columns(2)
-        with col_enc:
-            novo_status = "encerrada" if vaga["status"] == "aberta" else "aberta"
+        novo_status = "encerrada" if vaga["status"] == "aberta" else "aberta"
         label_btn = "⚫ Encerrar vaga" if vaga["status"] == "aberta" else "🟢 Reabrir vaga"
         with col_enc:
             if st.button(label_btn, use_container_width=True):
@@ -391,6 +426,32 @@ def tela_detalhe(vaga_id):
                     st.success("Vaga excluída.")
                     st.session_state.pop("vaga_aberta", None)
                     st.rerun()
+
+    elif perfil == "visualizador" and vaga["status"] == "aberta":
+        st.markdown("### 🚀 Candidatar-se")
+        candidatos = api_get("/candidatos/")
+        usuario = st.session_state.usuario
+        candidato_id = None
+        if candidatos:
+            for c in candidatos:
+                if c.get("email") == usuario.get("email"):
+                    candidato_id = c["id"]
+                    break
+
+        if candidato_id:
+            if st.button("✅ Candidatar-se a esta vaga", use_container_width=True, type="primary"):
+                resp = api_post("/candidaturas/", json={
+                    "candidato_id": candidato_id,
+                    "vaga_id": vaga_id,
+                })
+                if resp:
+                    st.success("Candidatura enviada com sucesso!")
+        else:
+            st.info("Complete seu perfil de candidato para se candidatar.")
+            if st.button("📝 Completar perfil", use_container_width=True, type="primary"):
+                st.session_state.pagina = "candidaturas"
+                st.session_state.pop("vaga_aberta", None)
+                st.rerun()
 
 
 # ── Dashboard ─────────────────────────────────────────────────────────────────
@@ -454,9 +515,8 @@ def tela_dashboard():
         for v in vagas:
             m = MODALIDADE_LABEL.get(v["modalidade"], v["modalidade"])
             contagem_mod[m] = contagem_mod.get(m, 0) + 1
-        cores_mod = ["#1565C0", "#2196F3", "#90CAF9"]
-        for i, (mod, qtd) in enumerate(sorted(contagem_mod.items(), key=lambda x: -x[1])):
-            _barra_horizontal(mod, qtd, len(vagas), cores_mod[i % len(cores_mod)])
+        if contagem_mod:
+            st.bar_chart(contagem_mod, color="#1565C0", height=200)
 
     with col_b:
         st.markdown("### 📄 Vagas por Contrato")
@@ -464,9 +524,8 @@ def tela_dashboard():
         for v in vagas:
             c = CONTRATO_LABEL.get(v["tipo_contrato"], v["tipo_contrato"])
             contagem_cont[c] = contagem_cont.get(c, 0) + 1
-        cores_cont = ["#2E7D32", "#4CAF50", "#A5D6A7", "#C8E6C9"]
-        for i, (cont, qtd) in enumerate(sorted(contagem_cont.items(), key=lambda x: -x[1])):
-            _barra_horizontal(cont, qtd, len(vagas), cores_cont[i % len(cores_cont)])
+        if contagem_cont:
+            st.bar_chart(contagem_cont, color="#2E7D32", height=200)
 
     st.divider()
 
@@ -478,9 +537,8 @@ def tela_dashboard():
         for v in vagas:
             nome = v["empresa"]["nome"]
             contagem_emp[nome] = contagem_emp.get(nome, 0) + 1
-        cores_emp = ["#6A1B9A","#8E24AA","#AB47BC","#CE93D8","#E1BEE7"]
-        for i, (emp, qtd) in enumerate(sorted(contagem_emp.items(), key=lambda x: -x[1])):
-            _barra_horizontal(emp, qtd, len(vagas), cores_emp[i % len(cores_emp)])
+        if contagem_emp:
+            st.bar_chart(contagem_emp, color="#6A1B9A", height=250)
 
     with col_d:
         st.markdown("### 💰 Salário Médio por Setor")
@@ -491,6 +549,8 @@ def tela_dashboard():
                 setor_salarios.setdefault(setor, []).append(v["salario"])
 
         if setor_salarios:
+            medias = {s: round(sum(vals)/len(vals)) for s, vals in setor_salarios.items()}
+            st.bar_chart(medias, color="#E65100", height=250)
             maior = max(sum(s)/len(s) for s in setor_salarios.values())
             cores_sal = ["#E65100","#F57C00","#FB8C00","#FFA726","#FFCC80"]
             for i, (setor, salarios) in enumerate(sorted(setor_salarios.items(), key=lambda x: -sum(x[1])/len(x[1]))):
@@ -498,15 +558,11 @@ def tela_dashboard():
                 media_fmt = f"R$ {media:,.0f}".replace(",", ".")
                 pct = media / maior * 100
                 st.markdown(f"""
-                <div style="margin-bottom:8px">
-                  <div style="display:flex;justify-content:space-between;margin-bottom:2px">
-                    <span style="font-size:13px">{setor}</span>
-                    <span style="font-size:13px;font-weight:600">{media_fmt}</span>
+                <div style="margin-bottom:6px">
+                  <div style="display:flex;justify-content:space-between">
+                    <span style="font-size:12px;color:#555">{setor}</span>
+                    <span style="font-size:12px;font-weight:600">{media_fmt}</span>
                   </div>
-                  <div style="background:#e0e0e0;border-radius:6px;height:18px">
-                    <div style="background:{cores_sal[i % len(cores_sal)]};width:{pct:.0f}%;height:18px;border-radius:6px"></div>
-                  </div>
-                  <div style="font-size:11px;color:#888">{len(salarios)} vaga(s)</div>
                 </div>
                 """, unsafe_allow_html=True)
 
@@ -696,6 +752,104 @@ def tela_usuarios():
                             st.rerun()
 
 
+# ── Candidaturas (Visualizador) ───────────────────────────────────────────────
+
+def tela_candidaturas():
+    _sidebar()
+    usuario = st.session_state.usuario
+
+    st.markdown("# 📋 Meu Perfil de Candidato")
+
+    candidatos = api_get("/candidatos/")
+    candidato = None
+    if candidatos:
+        for c in candidatos:
+            if c.get("email") == usuario.get("email"):
+                candidato = c
+                break
+
+    if not candidato:
+        st.info("Você ainda não tem um perfil de candidato. Preencha abaixo para poder se candidatar às vagas.")
+        with st.form("form_candidato"):
+            col1, col2 = st.columns(2)
+            with col1:
+                nome_c   = st.text_input("Nome completo *", value=usuario.get("nome", ""))
+                email_c  = st.text_input("Email *", value=usuario.get("email", ""), disabled=True)
+                telefone = st.text_input("Telefone")
+            with col2:
+                cidade   = st.text_input("Cidade")
+                estado   = st.text_input("Estado (UF)", max_chars=2)
+                nasc     = st.date_input("Data de nascimento", value=None)
+            salvar = st.form_submit_button("Salvar perfil", type="primary")
+
+        if salvar:
+            resp = api_post("/candidatos/", json={
+                "nome": nome_c,
+                "email": usuario.get("email"),
+                "telefone": telefone or None,
+                "cidade": cidade or None,
+                "estado": estado.upper() if estado else None,
+                "data_nascimento": str(nasc) if nasc else None,
+            })
+            if resp:
+                st.success("Perfil criado! Agora você pode se candidatar às vagas.")
+                st.rerun()
+        return
+
+    # Perfil existente
+    st.markdown(f"""
+    <div style="background:#e3f2fd;border-radius:12px;padding:16px 20px;margin-bottom:16px">
+      <div style="font-size:18px;font-weight:700">👤 {candidato['nome']}</div>
+      <div style="color:#555;font-size:13px">✉️ {candidato['email']}
+      {"&nbsp;&nbsp;📞 " + candidato['telefone'] if candidato.get('telefone') else ""}
+      {"&nbsp;&nbsp;📍 " + candidato['cidade'] + "/" + candidato['estado'] if candidato.get('cidade') else ""}
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("### 📄 Minhas Candidaturas")
+    candidaturas = api_get("/candidaturas/")
+    minhas = [c for c in (candidaturas or []) if c.get("candidato_id") == candidato["id"]]
+
+    STATUS_COR = {
+        "pendente":   ("#F9A825", "#fffde7"),
+        "em_analise": ("#1565C0", "#e3f2fd"),
+        "aprovado":   ("#2E7D32", "#e8f5e9"),
+        "reprovado":  ("#B71C1C", "#fce4ec"),
+    }
+    STATUS_LABEL = {
+        "pendente": "⏳ Pendente",
+        "em_analise": "🔍 Em análise",
+        "aprovado": "✅ Aprovado",
+        "reprovado": "❌ Reprovado",
+    }
+
+    if not minhas:
+        st.info("Você ainda não se candidatou a nenhuma vaga. Explore as vagas disponíveis!")
+        if st.button("💼 Ver vagas", type="primary"):
+            st.session_state.pagina = "vagas"
+            st.rerun()
+        return
+
+    for cand in minhas:
+        vaga = cand.get("vaga", {})
+        status = cand.get("status", "pendente")
+        cor, bg = STATUS_COR.get(status, ("#555", "#f5f5f5"))
+        st.markdown(f"""
+        <div style="background:{bg};border-left:4px solid {cor};border-radius:8px;padding:12px 16px;margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div style="font-weight:700;font-size:15px">{vaga.get('titulo','—')}</div>
+              <div style="color:#555;font-size:13px">🏭 {vaga.get('empresa',{}).get('nome','—')} &nbsp;|&nbsp; 📅 {cand.get('data_candidatura','')}</div>
+            </div>
+            <div style="background:{cor};color:white;padding:4px 12px;border-radius:12px;font-size:12px;font-weight:600">
+              {STATUS_LABEL.get(status, status)}
+            </div>
+          </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+
 # ── Roteamento ────────────────────────────────────────────────────────────────
 
 if not st.session_state.token:
@@ -708,5 +862,7 @@ elif st.session_state.pagina == "empresas":
     tela_empresas()
 elif st.session_state.pagina == "usuarios":
     tela_usuarios()
+elif st.session_state.pagina == "candidaturas":
+    tela_candidaturas()
 else:
     tela_painel()

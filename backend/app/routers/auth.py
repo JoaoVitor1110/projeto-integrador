@@ -32,6 +32,29 @@ class TokenResponse(BaseModel):
     usuario: UsuarioResponse
 
 
+@router.post("/registro", response_model=TokenResponse)
+def registro(
+    dados: UsuarioCreate,
+    db: Session = Depends(get_db),
+):
+    if db.query(models.Usuario).filter(models.Usuario.email == dados.email).first():
+        raise HTTPException(status_code=400, detail="Email já cadastrado")
+    usuario = models.Usuario(
+        nome=dados.nome,
+        email=dados.email,
+        senha_hash=auth.hash_senha(dados.senha),
+        perfil=models.PerfilEnum.visualizador,
+    )
+    db.add(usuario)
+    db.commit()
+    db.refresh(usuario)
+    token = auth.criar_token(
+        {"sub": usuario.email},
+        timedelta(minutes=auth.ACCESS_TOKEN_EXPIRE_MINUTES),
+    )
+    return {"access_token": token, "token_type": "bearer", "usuario": usuario}
+
+
 @router.post("/login", response_model=TokenResponse)
 def login(
     form: OAuth2PasswordRequestForm = Depends(),
