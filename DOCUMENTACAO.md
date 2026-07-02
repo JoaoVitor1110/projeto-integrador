@@ -48,9 +48,9 @@ São Paulo – SP
 
 ## RESUMO
 
-O presente trabalho descreve o desenvolvimento de um sistema web completo para gestão de vagas de emprego, denominado **Agência de Empregos**, elaborado como Projeto Integrador da Unidade Curricular 6 (UC6) do Curso Técnico em Inteligência Artificial do SENAC Lapa Tito. A solução integra um backend construído com o framework FastAPI em linguagem Python, banco de dados relacional SQLite gerenciado via SQLAlchemy e interface web interativa desenvolvida com Streamlit. O sistema permite o cadastro e gerenciamento de empresas, vagas de emprego, candidatos e candidaturas, com controle de acesso baseado em perfis de usuário (Administrador, Recrutador e Candidato). A aplicação é hospedada em infraestrutura de nuvem utilizando instância AWS EC2 para o backend e Streamlit Cloud para o frontend, com comunicação segura provida por túnel Cloudflare. O código-fonte é versionado no GitHub e o sistema encontra-se em pleno funcionamento no endereço **projeto-integrador-senac.streamlit.app**.
+O presente trabalho descreve o desenvolvimento de um sistema web completo para gestão de vagas de emprego, denominado **Agência de Empregos**, elaborado como Projeto Integrador da Unidade Curricular 6 (UC6) do Curso Técnico em Inteligência Artificial do SENAC Lapa Tito. A solução integra um backend construído com o framework FastAPI em linguagem Python, banco de dados relacional SQLite gerenciado via SQLAlchemy e interface web interativa desenvolvida com Streamlit. O sistema permite o cadastro e gerenciamento de empresas, vagas de emprego com descrição detalhada, candidatos e candidaturas, com controle de acesso baseado em perfis de usuário (Administrador, Recrutador e Candidato). O backend é conteinerizado com Docker e hospedado em VPS (Hostinger) gerenciada pelo EasyPanel, com domínio próprio `api.alvesmotionlab.com.br` e certificado HTTPS via Cloudflare. O frontend é publicado no Streamlit Cloud com deploy automático a partir do repositório GitHub. O sistema encontra-se em pleno funcionamento no endereço **https://projeto-integrador-senac.streamlit.app**.
 
-**Palavras-chave:** sistema web; gestão de vagas; FastAPI; Streamlit; banco de dados; AWS; Python.
+**Palavras-chave:** sistema web; gestão de vagas; FastAPI; Streamlit; Docker; EasyPanel; Python.
 
 ---
 
@@ -69,18 +69,20 @@ O presente trabalho descreve o desenvolvimento de um sistema web completo para g
    - 5.4 Diagrama Entidade-Relacionamento
    - 5.5 Controle de Acesso e Perfis de Usuário
    - 5.6 Funcionalidades do Sistema
+   - 5.7 Endpoints da API REST
 6. GUIA DE ACESSO E UTILIZAÇÃO
    - 6.1 Acesso ao Sistema
    - 6.2 Como Criar um Usuário
    - 6.3 Perfis e Permissões
    - 6.4 Como Cadastrar uma Vaga
    - 6.5 Como se Candidatar a uma Vaga
-   - 6.6 Como Acessar o Banco de Dados
-   - 6.7 Como Acessar o Servidor (EC2)
+   - 6.6 Como Gerenciar Candidaturas (Recrutador/Admin)
+   - 6.7 Como Acessar o Banco de Dados
+   - 6.8 Como Acessar o Servidor (EasyPanel)
 7. INFRAESTRUTURA E IMPLANTAÇÃO
-   - 7.1 Servidor Backend (AWS EC2)
+   - 7.1 Servidor Backend (EasyPanel + Docker)
    - 7.2 Frontend (Streamlit Cloud)
-   - 7.3 Exposição HTTPS (Cloudflare Tunnel)
+   - 7.3 DNS e HTTPS (Cloudflare)
    - 7.4 Versionamento (GitHub)
 8. CRONOGRAMA
 9. CONSIDERAÇÕES FINAIS
@@ -101,6 +103,7 @@ O presente trabalho descreve o desenvolvimento de um sistema web completo para g
 | **Cidade / UF** | São Paulo – SP |
 | **Período** | 1.º Semestre de 2026 |
 | **URL do sistema** | https://projeto-integrador-senac.streamlit.app |
+| **URL da API** | https://api.alvesmotionlab.com.br |
 | **Repositório** | https://github.com/joaovitor1110/projeto-integrador |
 
 ---
@@ -109,14 +112,15 @@ O presente trabalho descreve o desenvolvimento de um sistema web completo para g
 
 O presente projeto aborda o desenvolvimento de uma plataforma web completa para gestão de vagas de emprego, destinada a conectar empresas recrutadoras e candidatos a oportunidades de trabalho. O sistema, denominado **Agência de Empregos**, simula o funcionamento de uma agência digital de recrutamento, oferecendo ferramentas para publicação, gerenciamento e candidatura a vagas.
 
-O mercado de trabalho brasileiro enfrenta um desafio crescente de intermediação eficiente entre oferta e demanda de empregos. Plataformas digitais de recrutamento tornaram-se indispensáveis tanto para empresas que buscam talentos quanto para candidatos que buscam oportunidades. Diante desse contexto, o projeto propõe a implementação de um sistema web funcional e completo, capaz de organizar todo o ciclo de uma vaga: desde o cadastro pela empresa até a candidatura e acompanhamento pelo candidato.
+O mercado de trabalho brasileiro enfrenta um desafio crescente de intermediação eficiente entre oferta e demanda de empregos. Plataformas digitais de recrutamento tornaram-se indispensáveis tanto para empresas que buscam talentos quanto para candidatos que buscam oportunidades. Diante desse contexto, o projeto propõe a implementação de um sistema web funcional e completo, capaz de organizar todo o ciclo de uma vaga: desde o cadastro pela empresa até a candidatura, acompanhamento e decisão final pelo recrutador.
 
 O sistema contempla as seguintes áreas:
 
 - cadastro e gerenciamento de empresas;
-- publicação e gestão de vagas de emprego com atributos detalhados;
+- publicação e gestão de vagas com descrição detalhada, benefícios e requisitos;
 - cadastro e acompanhamento de candidatos;
-- registro e acompanhamento de candidaturas;
+- registro e acompanhamento de candidaturas com atualização de status;
+- visão do recrutador sobre candidatos inscritos por vaga;
 - dashboard analítico com indicadores de vagas;
 - controle de acesso com três perfis distintos de usuário.
 
@@ -126,16 +130,18 @@ O sistema contempla as seguintes áreas:
 
 ### 3.1 Objetivo Geral
 
-Desenvolver um sistema web completo e funcional para gestão de vagas de emprego, integrando um backend RESTful construído com FastAPI em Python, banco de dados relacional SQLite, e interface web interativa com Streamlit, implantado em infraestrutura de nuvem (AWS EC2 + Streamlit Cloud) com acesso público.
+Desenvolver um sistema web completo e funcional para gestão de vagas de emprego, integrando um backend RESTful construído com FastAPI em Python, banco de dados relacional SQLite, e interface web interativa com Streamlit, implantado em infraestrutura de nuvem com domínio próprio e acesso público seguro via HTTPS.
 
 ### 3.2 Objetivos Específicos
 
 - Modelar e implementar um banco de dados relacional com entidades, atributos e relacionamentos coerentes com o contexto de uma agência de empregos;
 - Desenvolver uma API REST completa com FastAPI, incluindo autenticação JWT, controle de perfis e operações CRUD para todas as entidades do sistema;
 - Implementar controle de acesso baseado em perfis (Admin, Recrutador e Candidato), com restrições de permissão por funcionalidade;
-- Construir uma interface web responsiva e interativa com Streamlit, contendo painel de vagas, dashboard analítico, gerenciamento de candidaturas e área administrativa;
-- Hospedar o backend em instância AWS EC2 com Amazon Linux 2023 e o frontend no Streamlit Cloud, garantindo acesso público e contínuo;
-- Implementar túnel HTTPS seguro via Cloudflare para permitir a comunicação entre o frontend (HTTPS) e o backend (HTTP) em ambiente de nuvem;
+- Construir uma interface web responsiva com navbar horizontal, fonte Poppins e cards informativos, utilizando Streamlit;
+- Conteinerizar o backend com Docker e implantá-lo em VPS (Hostinger) gerenciada pelo EasyPanel com domínio `api.alvesmotionlab.com.br`;
+- Configurar DNS e HTTPS via Cloudflare para o domínio da API;
+- Hospedar o frontend no Streamlit Cloud com deploy automático a partir do GitHub;
+- Permitir que recrutadores visualizem os candidatos inscritos em cada vaga com dados de contato e atualizem o status de cada candidatura;
 - Versionar o código-fonte no GitHub com histórico de commits documentado;
 - Elaborar documentação técnica completa em conformidade com as normas da ABNT.
 
@@ -145,11 +151,11 @@ Desenvolver um sistema web completo e funcional para gestão de vagas de emprego
 
 A digitalização dos processos seletivos é uma realidade consolidada no mercado de trabalho contemporâneo. Empresas de todos os portes utilizam plataformas digitais para publicar vagas, receber candidaturas e gerenciar processos seletivos. A construção de um sistema com essa finalidade permite ao estudante de tecnologia vivenciar, na prática, o desenvolvimento completo de uma aplicação real — desde a modelagem do banco de dados até a implantação em produção.
 
-Do ponto de vista acadêmico, o projeto justifica-se por integrar, de forma coesa e aplicada, as principais tecnologias estudadas ao longo do Curso Técnico em Inteligência Artificial: desenvolvimento de APIs REST com Python, modelagem e persistência de dados relacionais, autenticação e segurança, desenvolvimento de interfaces web e implantação em infraestrutura de nuvem.
+Do ponto de vista acadêmico, o projeto justifica-se por integrar, de forma coesa e aplicada, as principais tecnologias estudadas ao longo do Curso Técnico em Inteligência Artificial: desenvolvimento de APIs REST com Python, modelagem e persistência de dados relacionais, autenticação e segurança, conteinerização com Docker, desenvolvimento de interfaces web e implantação em infraestrutura de nuvem.
 
 A escolha do FastAPI como framework principal agrega relevância técnica ao trabalho, por se tratar de um dos frameworks Python mais modernos e de alta performance do mercado, amplamente utilizado na indústria para construção de APIs REST. O uso do Streamlit como camada de interface permite desenvolver aplicações web interativas com Python puro, sem a necessidade de conhecimento em JavaScript ou frameworks de frontend tradicionais.
 
-A implantação em infraestrutura real de nuvem (AWS EC2) e a exposição pública do sistema via Streamlit Cloud distinguem este projeto de soluções que funcionam apenas em ambiente local, demonstrando domínio sobre o ciclo completo de desenvolvimento de software: concepção, implementação, testes e implantação em produção.
+A implantação em infraestrutura real de nuvem com domínio próprio (EasyPanel + Hostinger VPS + Cloudflare) e a exposição pública do sistema via Streamlit Cloud distinguem este projeto de soluções que funcionam apenas em ambiente local, demonstrando domínio sobre o ciclo completo de desenvolvimento de software: concepção, implementação, conteinerização e implantação em produção com disponibilidade contínua (24/7).
 
 ---
 
@@ -157,32 +163,40 @@ A implantação em infraestrutura real de nuvem (AWS EC2) e a exposição públi
 
 ### 5.1 Visão Geral da Arquitetura
 
-A solução é composta por três camadas principais, integradas entre si:
+A solução é composta por três camadas principais integradas entre si:
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    USUÁRIO (Navegador)                   │
-└─────────────────────────────┬───────────────────────────┘
-                              │ HTTPS
-┌─────────────────────────────▼───────────────────────────┐
-│              STREAMLIT CLOUD (Frontend)                  │
-│          projeto-integrador-senac.streamlit.app          │
-│              streamlit_app.py  (Python)                  │
-└─────────────────────────────┬───────────────────────────┘
-                              │ HTTPS (Cloudflare Tunnel)
-┌─────────────────────────────▼───────────────────────────┐
-│              AWS EC2 — t3.micro (Backend)                │
-│           Amazon Linux 2023 | IP: 172.31.7.192           │
-│    FastAPI + Uvicorn  →  porta 8000                      │
-│    SQLite  →  agencia_empregos.db                        │
-└─────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│                    USUÁRIO (Navegador)                        │
+└──────────────────────────────┬───────────────────────────────┘
+                               │ HTTPS
+┌──────────────────────────────▼───────────────────────────────┐
+│              STREAMLIT CLOUD (Frontend)                       │
+│          projeto-integrador-senac.streamlit.app              │
+│          streamlit_app.py  (Python + Streamlit)              │
+│          Deploy automático via GitHub (branch main)          │
+└──────────────────────────────┬───────────────────────────────┘
+                               │ HTTPS
+                    api.alvesmotionlab.com.br
+                    (DNS Cloudflare → IP da VPS)
+┌──────────────────────────────▼───────────────────────────────┐
+│           HOSTINGER VPS — EasyPanel (Backend)                │
+│           IP: 72.60.51.179                                   │
+│   ┌──────────────────────────────────────────────────────┐   │
+│   │  Docker Container                                    │   │
+│   │  FastAPI + Uvicorn  →  porta 8000                   │   │
+│   │  Alembic (migrações automáticas no startup)         │   │
+│   └──────────────────────────┬───────────────────────────┘   │
+│                              │ Volume persistente            │
+│   ┌──────────────────────────▼───────────────────────────┐   │
+│   │  /data/agencia_empregos.db  (SQLite)                │   │
+│   └──────────────────────────────────────────────────────┘   │
+└──────────────────────────────────────────────────────────────┘
 ```
 
-- **Camada de apresentação:** interface web construída com Streamlit, hospedada no Streamlit Cloud. Acesso público via HTTPS sem necessidade de configuração local;
-- **Camada de aplicação:** API REST construída com FastAPI, executada via servidor Uvicorn em instância AWS EC2. Responsável pela lógica de negócio, autenticação e persistência;
-- **Camada de dados:** banco de dados relacional SQLite, gerenciado pelo ORM SQLAlchemy com migrações controladas pelo Alembic.
-
-A comunicação entre o Streamlit Cloud (HTTPS obrigatório) e o backend EC2 (HTTP) é viabilizada pelo **Cloudflare Tunnel**, que fornece um endpoint HTTPS público sem necessidade de certificado SSL próprio ou IP fixo.
+- **Camada de apresentação:** interface web construída com Streamlit, hospedada no Streamlit Cloud. Navbar horizontal azul com navegação por perfil, cards de vagas, dashboard analítico, painel de candidato e área administrativa;
+- **Camada de aplicação:** API REST construída com FastAPI, conteinerizada com Docker e executada via servidor Uvicorn em VPS Hostinger gerenciada pelo EasyPanel. Responsável pela lógica de negócio, autenticação JWT e persistência;
+- **Camada de dados:** banco de dados relacional SQLite, gerenciado pelo ORM SQLAlchemy com migrações controladas pelo Alembic. O arquivo do banco persiste em volume Docker (`/data`) independente do ciclo de vida do container.
 
 ---
 
@@ -190,24 +204,25 @@ A comunicação entre o Streamlit Cloud (HTTPS obrigatório) e o backend EC2 (HT
 
 | Tecnologia | Versão | Função |
 |---|---|---|
-| **Python** | 3.11+ | Linguagem principal do backend e frontend |
-| **FastAPI** | 0.110+ | Framework para construção da API REST |
-| **Uvicorn** | 0.29+ | Servidor ASGI para execução do FastAPI |
-| **SQLAlchemy** | 2.0+ | ORM para mapeamento objeto-relacional |
+| **Python** | 3.11 | Linguagem principal do backend e frontend |
+| **FastAPI** | ≥ 0.115 | Framework para construção da API REST |
+| **Uvicorn** | 0.30 | Servidor ASGI para execução do FastAPI |
+| **SQLAlchemy** | 2.0 | ORM para mapeamento objeto-relacional |
 | **SQLite** | 3.x | Banco de dados relacional embutido |
-| **Alembic** | 1.13+ | Controle de migrações do banco de dados |
-| **Pydantic** | 2.x | Validação de dados e schemas da API |
-| **python-jose** | 3.3+ | Geração e validação de tokens JWT |
-| **passlib[bcrypt]** | 1.7.4 | Hash seguro de senhas com bcrypt |
-| **bcrypt** | 4.0.1 | Algoritmo de hash para senhas |
-| **Streamlit** | 1.35+ | Framework para interface web interativa |
-| **Requests** | 2.31+ | Cliente HTTP para consumo da API no frontend |
-| **AWS EC2** | t3.micro | Servidor virtual para hospedagem do backend |
-| **Amazon Linux** | 2023 | Sistema operacional do servidor |
-| **Cloudflare Tunnel** | — | Túnel HTTPS para exposição segura da API |
-| **Streamlit Cloud** | — | Plataforma de hospedagem do frontend |
+| **Alembic** | 1.13 | Controle de migrações do banco de dados |
+| **Pydantic** | 2.9 | Validação de dados e schemas da API |
+| **python-jose** | 3.3 | Geração e validação de tokens JWT |
+| **passlib[bcrypt]** | 1.7.4 | Hash seguro de senhas |
+| **bcrypt** | 3.2.2 | Algoritmo de hash (versão compatível com passlib 1.7.4) |
+| **Docker** | — | Conteinerização do backend |
+| **EasyPanel** | — | Painel de gerenciamento de containers na VPS |
+| **Hostinger VPS** | — | Servidor virtual com IP fixo (72.60.51.179) |
+| **Cloudflare** | — | DNS e HTTPS para o domínio da API |
+| **Streamlit** | ≥ 1.35 | Framework para interface web interativa |
+| **Requests** | 2.31 | Cliente HTTP para consumo da API no frontend |
+| **Google Fonts** | — | Tipografia Poppins na interface |
 | **GitHub** | — | Versionamento e repositório do código-fonte |
-| **Git** | 2.x | Controle de versão local |
+| **Streamlit Cloud** | — | Hospedagem do frontend com deploy automático |
 
 #### Estrutura de Diretórios do Projeto
 
@@ -216,10 +231,14 @@ projeto-integrador/
 ├── streamlit_app.py              # Interface web (frontend)
 ├── requirements.txt              # Dependências do frontend
 ├── .streamlit/
-│   └── secrets.toml              # Configurações sensíveis (API_URL)
+│   └── secrets.toml              # Configurações (API_URL)
+├── DOCUMENTACAO.md               # Documentação técnica (este arquivo)
 └── backend/
+    ├── Dockerfile                # Imagem Docker do backend
+    ├── requirements.txt          # Dependências do backend
+    ├── seed_dados.py             # Script de carga de dados de teste
     ├── app/
-    │   ├── main.py               # Ponto de entrada da API
+    │   ├── main.py               # Ponto de entrada da API + seed automático
     │   ├── database.py           # Configuração do banco de dados
     │   ├── models.py             # Modelos ORM (entidades)
     │   ├── schemas.py            # Schemas Pydantic (validação)
@@ -230,12 +249,14 @@ projeto-integrador/
     │       ├── empresas.py       # Rotas de empresas
     │       ├── candidatos.py     # Rotas de candidatos
     │       └── candidaturas.py   # Rotas de candidaturas
-    ├── alembic/
-    │   ├── env.py                # Configuração do Alembic
-    │   └── versions/             # Arquivos de migração
-    ├── alembic.ini               # Configuração principal do Alembic
-    ├── requirements.txt          # Dependências do backend
-    └── agencia_empregos.db       # Arquivo do banco de dados SQLite
+    └── alembic/
+        ├── env.py                # Configuração do Alembic
+        ├── alembic.ini           # Configuração principal
+        └── versions/             # Arquivos de migração
+            ├── 5f222dc0b381_initial_schema.py
+            ├── 063891927353_add_usuarios_table.py
+            ├── a1b2c3d4e5f6_add_vaga_fields.py
+            └── b2c3d4e5f6a7_add_descricao_to_vaga.py
 ```
 
 ---
@@ -248,7 +269,7 @@ O banco de dados relacional é composto pelas seguintes entidades:
 |---|---|
 | **usuarios** | id, nome, email, senha_hash, perfil (admin/recrutador/visualizador) |
 | **empresas** | id, nome, cnpj, setor, descricao, cidade, estado |
-| **vagas** | id, titulo, local, salario, modalidade, horario, tipo_contrato, publico_alvo, vaga_pcd, status, data_publicacao, data_abertura, data_fechamento, quantidade_vagas, empresa_id |
+| **vagas** | id, titulo, local, descricao, salario, modalidade, horario, tipo_contrato, publico_alvo, vaga_pcd, status, data_publicacao, data_abertura, data_fechamento, quantidade_vagas, empresa_id |
 | **candidatos** | id, nome, email, telefone, cidade, estado, data_nascimento |
 | **candidaturas** | id, candidato_id, vaga_id, data_candidatura, status |
 | **beneficios** | id, nome, descricao |
@@ -284,13 +305,14 @@ EMPRESAS                          VAGAS
 ├── id (PK)                       ├── id (PK)
 ├── nome                          ├── titulo
 ├── cnpj (UNIQUE)                 ├── local
-├── setor                         ├── salario
-├── descricao                     ├── modalidade
-├── cidade                        ├── horario
-└── estado                        ├── tipo_contrato
-         │                        ├── publico_alvo
-         │  1:N                   ├── vaga_pcd
-         └──────────────────────► ├── status
+├── setor                         ├── descricao
+├── descricao                     ├── salario
+├── cidade                        ├── modalidade
+└── estado                        ├── horario
+         │                        ├── tipo_contrato
+         │  1:N                   ├── publico_alvo
+         └──────────────────────► ├── vaga_pcd
+                                  ├── status
                                   ├── data_publicacao
                                   ├── data_abertura
                                   ├── data_fechamento
@@ -320,8 +342,8 @@ EMPRESAS                          VAGAS
 **Relacionamentos:**
 
 - `EMPRESAS` → `VAGAS`: uma empresa possui muitas vagas (1:N)
-- `VAGAS` ↔ `BENEFICIOS`: uma vaga possui muitos benefícios e um benefício pertence a muitas vagas (N:N via `vaga_beneficio`)
-- `VAGAS` ↔ `REQUISITOS`: uma vaga possui muitos requisitos e um requisito pertence a muitas vagas (N:N via `vaga_requisito`)
+- `VAGAS` ↔ `BENEFICIOS`: N:N via tabela `vaga_beneficio`
+- `VAGAS` ↔ `REQUISITOS`: N:N via tabela `vaga_requisito`
 - `CANDIDATOS` → `CANDIDATURAS`: um candidato faz muitas candidaturas (1:N)
 - `VAGAS` → `CANDIDATURAS`: uma vaga recebe muitas candidaturas (1:N)
 
@@ -329,54 +351,105 @@ EMPRESAS                          VAGAS
 
 ### 5.5 Controle de Acesso e Perfis de Usuário
 
-O sistema implementa autenticação via **JSON Web Token (JWT)**. Ao realizar login, o usuário recebe um token de acesso com validade configurável (padrão: 60 minutos). Todas as rotas protegidas exigem o envio desse token no cabeçalho HTTP (`Authorization: Bearer <token>`).
+O sistema implementa autenticação via **JSON Web Token (JWT)**. Ao realizar login, o usuário recebe um token de acesso. Todas as rotas protegidas exigem o envio desse token no cabeçalho HTTP (`Authorization: Bearer <token>`).
 
 Existem três perfis de usuário com permissões distintas:
 
 | Funcionalidade | Admin | Recrutador | Candidato |
 |---|:---:|:---:|:---:|
 | Visualizar vagas | ✅ | ✅ | ✅ |
-| Cadastrar/editar vagas | ✅ | ✅ | ❌ |
+| Cadastrar/editar vagas (com descrição) | ✅ | ✅ | ❌ |
 | Encerrar/reabrir vagas | ✅ | ✅ | ❌ |
 | Dashboard analítico | ✅ | ✅ | ❌ |
+| Ver candidatos inscritos por vaga | ✅ | ✅ | ❌ |
+| Atualizar status de candidatura | ✅ | ✅ | ❌ |
 | Candidatar-se a vagas | ❌ | ❌ | ✅ |
 | Ver minhas candidaturas | ❌ | ❌ | ✅ |
+| Editar dados de contato do perfil | ❌ | ❌ | ✅ |
 | Gerenciar empresas | ✅ | ❌ | ❌ |
 | Gerenciar candidatos | ✅ | ❌ | ❌ |
 | Gerenciar usuários | ✅ | ❌ | ❌ |
 | Criar usuários com qualquer perfil | ✅ | ❌ | ❌ |
-| Excluir usuários | ✅* | ❌ | ❌ |
+| Excluir usuários* | ✅ | ❌ | ❌ |
 
-> \* O administrador não pode excluir a si próprio, nem excluir o último administrador do sistema.
+> \* O administrador não pode excluir a si próprio.
 
 ---
 
 ### 5.6 Funcionalidades do Sistema
 
+#### Navbar Horizontal
+Barra de navegação azul no topo da página, exibida após login. Apresenta o logotipo, botões de navegação conforme o perfil do usuário, e o nome/badge do usuário logado. O botão da página ativa é destacado visualmente.
+
 #### Painel de Vagas
-Exibe todas as vagas cadastradas em formato de cards com informações resumidas: título, empresa, localidade, modalidade, tipo de contrato e salário. Possui filtros por modalidade, tipo de contrato, status e vagas PcD.
+Exibe todas as vagas cadastradas em formato de cards (3 colunas) com: título, status, empresa, localidade, modalidade, tipo de contrato, indicador PcD e salário. Possui filtros por modalidade, tipo de contrato, status e vagas PcD, exibidos em um expander "🔍 Filtros".
 
 #### Detalhe da Vaga
-Apresenta todas as informações de uma vaga: benefícios, requisitos (obrigatórios e desejáveis), horário, quantidade de vagas disponíveis, dias em aberto e ações disponíveis conforme perfil do usuário.
+Apresenta todas as informações de uma vaga:
+- Métricas: salário, modalidade, tipo de contrato, PcD, quantidade de vagas;
+- Descrição da vaga (sobre o que a pessoa vai fazer);
+- Benefícios e requisitos (obrigatórios e desejáveis);
+- Dias em aberto desde a data de abertura.
+
+Para **recrutadores e admins**: seção "👥 Candidatos Inscritos" com nome, e-mail, telefone, cidade e data de candidatura de cada inscrito, além de seletor para atualizar o status individualmente (Pendente → Em análise → Aprovado → Reprovado).
+
+Para **candidatos**: botão de candidatura (ou mensagem de "já inscrito" caso o candidato já tenha se candidatado).
 
 #### Dashboard Analítico (Admin/Recrutador)
 Exibe indicadores visuais com:
 - KPIs: total de vagas, vagas abertas, vagas encerradas, posições disponíveis e vagas PcD;
-- Gráficos de barras horizontais: vagas por modalidade, vagas por tipo de contrato, vagas por empresa e salário médio por setor;
-- Percentuais de status das vagas;
-- Alerta de vagas abertas há muito tempo (30, 60 e 90+ dias).
+- Gráficos de barras horizontais: vagas por modalidade, por tipo de contrato, por empresa e salário médio por setor;
+- Percentuais de status das vagas (abertas vs. encerradas vs. PcD);
+- Alerta de vagas abertas há mais de 60 dias (até 10 itens, com escala de cores: amarelo ≥60d, laranja ≥90d, vermelho ≥120d).
+
+#### Cadastrar / Editar Vaga (Admin/Recrutador)
+Formulário com campos: título, local, descrição (texto livre sobre a vaga), salário, quantidade de vagas, empresa, modalidade, tipo de contrato, público-alvo, horário e indicador PcD.
 
 #### Gerenciamento de Empresas (Admin)
 CRUD completo de empresas: nome, CNPJ, setor, cidade, estado e descrição.
 
 #### Gerenciamento de Candidatos (Admin)
-Listagem e edição dos perfis de candidatos cadastrados.
+Listagem e edição dos perfis de candidatos cadastrados: nome, e-mail, telefone, cidade, estado e data de nascimento.
 
 #### Gerenciamento de Usuários (Admin)
-Criação de usuários com qualquer perfil (Admin, Recrutador, Candidato) e exclusão com proteções de segurança.
+Criação de usuários com qualquer perfil (Admin, Recrutador, Candidato) e exclusão com proteção contra auto-exclusão.
 
-#### Minhas Candidaturas (Candidato)
-Painel do candidato com seu perfil pessoal e histórico de candidaturas com status colorido: Pendente, Em análise, Aprovado e Reprovado.
+#### Perfil do Candidato / Minhas Candidaturas (Candidato)
+Painel com dados de contato do candidato (editáveis via expander), histórico de candidaturas com status colorido (Pendente, Em análise, Aprovado, Reprovado) e informações da vaga e empresa de cada candidatura.
+
+---
+
+### 5.7 Endpoints da API REST
+
+A documentação interativa completa (Swagger UI) está disponível em:
+
+**https://api.alvesmotionlab.com.br/docs**
+
+| Método | Endpoint | Descrição | Autenticação |
+|---|---|---|---|
+| POST | /auth/registro | Cadastro de novo usuário | Pública |
+| POST | /auth/login | Login (retorna token JWT) | Pública |
+| GET | /auth/usuarios | Lista todos os usuários | Admin |
+| POST | /auth/usuarios | Cria usuário (qualquer perfil) | Admin |
+| DELETE | /auth/usuarios/{id} | Exclui usuário | Admin |
+| GET | /vagas/ | Lista vagas (com filtros opcionais) | Autenticado |
+| POST | /vagas/ | Cria nova vaga | Admin/Recrutador |
+| GET | /vagas/{id} | Detalhe de uma vaga | Autenticado |
+| PUT | /vagas/{id} | Atualiza vaga | Admin/Recrutador |
+| DELETE | /vagas/{id} | Exclui vaga | Admin/Recrutador |
+| GET | /empresas/ | Lista empresas | Autenticado |
+| POST | /empresas/ | Cria empresa | Admin |
+| GET | /empresas/{id} | Detalhe de empresa | Autenticado |
+| PUT | /empresas/{id} | Atualiza empresa | Admin |
+| DELETE | /empresas/{id} | Exclui empresa | Admin |
+| GET | /candidatos/ | Lista candidatos | Autenticado |
+| POST | /candidatos/ | Cria perfil de candidato | Autenticado |
+| GET | /candidatos/{id} | Detalhe de candidato | Autenticado |
+| PUT | /candidatos/{id} | Atualiza candidato | Autenticado |
+| GET | /candidaturas/ | Lista candidaturas (filtro: ?vaga_id=) | Autenticado |
+| POST | /candidaturas/ | Registra candidatura | Autenticado |
+| GET | /candidaturas/{id} | Detalhe de candidatura | Autenticado |
+| PUT | /candidaturas/{id}/status | Atualiza status da candidatura | Admin/Recrutador |
 
 ---
 
@@ -390,6 +463,8 @@ O sistema está disponível publicamente na internet pelo endereço:
 
 Não é necessária nenhuma instalação no computador do usuário. Basta um navegador web atualizado (Chrome, Firefox, Edge ou Safari).
 
+> **Dica para celular:** ao digitar e-mail e senha, desative o autocomplete/autocorrect do teclado para evitar que letras maiúsculas sejam inseridas automaticamente.
+
 ---
 
 ### 6.2 Como Criar um Usuário
@@ -398,20 +473,14 @@ Não é necessária nenhuma instalação no computador do usuário. Basta um nav
 
 1. Acesse **https://projeto-integrador-senac.streamlit.app**
 2. Na tela inicial, clique na aba **"📝 Criar conta"**
-3. Preencha:
-   - Nome completo
-   - E-mail
-   - Senha (mínimo 6 caracteres)
-   - Confirmação de senha
+3. Preencha: nome completo, e-mail, senha (mínimo 6 caracteres) e confirmação de senha
 4. Clique em **"Criar conta"**
 5. O sistema criará automaticamente um perfil de **Candidato**
-
-> O auto-cadastro cria automaticamente o perfil de usuário e o registro de candidato vinculado. O candidato já pode visualizar vagas e se candidatar imediatamente.
 
 #### Opção B — Criação pelo Administrador
 
 1. Faça login com uma conta de **Administrador**
-2. No menu lateral, clique em **"👥 Usuários"**
+2. Na navbar, clique em **"👥 Usuários"**
 3. Clique em **"➕ Criar novo usuário"**
 4. Preencha nome, e-mail, senha e selecione o perfil desejado (Candidato, Recrutador ou Admin)
 5. Clique em **"Criar usuário"**
@@ -432,27 +501,28 @@ Não é necessária nenhuma instalação no computador do usuário. Basta um nav
 | Perfil | Descrição | Como é criado |
 |---|---|---|
 | **Admin** | Acesso total ao sistema | Criado por outro Admin |
-| **Recrutador** | Gerencia vagas e vê dashboard | Criado por Admin |
-| **Candidato** | Visualiza vagas e se candidata | Auto-cadastro ou criado por Admin |
+| **Recrutador** | Gerencia vagas, vê dashboard e candidatos inscritos | Criado por Admin |
+| **Candidato** | Visualiza vagas, se candidata e acompanha candidaturas | Auto-cadastro ou criado por Admin |
 
 ---
 
 ### 6.4 Como Cadastrar uma Vaga
 
 1. Faça login com conta de **Admin** ou **Recrutador**
-2. No menu, clique em **"💼 Vagas"**
-3. Clique em **"➕ Cadastrar nova vaga"** (expander no topo da página)
+2. Na navbar, clique em **"💼 Vagas"**
+3. Clique em **"➕ Cadastrar nova vaga"**
 4. Preencha os campos:
    - **Título** — nome do cargo
    - **Local** — cidade/estado
-   - **Salário** — valor em R$ (ou deixe 0 para "A combinar")
-   - **Quantidade de vagas** — número de posições
+   - **Salário** — valor em R$ (deixe 0 para "A combinar")
+   - **Quantidade de vagas** — número de posições abertas
    - **Empresa** — selecione da lista de empresas cadastradas
    - **Modalidade** — Presencial, Remoto ou Híbrido
    - **Tipo de contrato** — CLT, PJ, Temporário ou Estágio
    - **Público-alvo** — Ambos, Masculino ou Feminino
    - **Horário** — ex.: "Segunda a Sexta, 9h–18h"
-   - **Vaga PcD** — marcar se a vaga é para Pessoa com Deficiência
+   - **Descrição da vaga** — texto livre sobre responsabilidades e o que a pessoa vai fazer
+   - **Vaga PcD** — marcar se a vaga é destinada a Pessoa com Deficiência
 5. Clique em **"Salvar vaga"**
 
 ---
@@ -464,55 +534,59 @@ Não é necessária nenhuma instalação no computador do usuário. Basta um nav
 3. Role a página até a seção **"🚀 Candidatar-se"**
 4. Clique em **"✅ Candidatar-se a esta vaga"**
 
-> Caso o candidato ainda não tenha completado o perfil com dados de contato (telefone, cidade, estado), o sistema solicitará o preenchimento antes de permitir a candidatura.
+> Caso o candidato ainda não tenha completado o perfil com dados de contato, o sistema solicitará o preenchimento antes de permitir a candidatura. Após inscrito, a mensagem muda para "✅ Você já está inscrito nessa vaga!".
 
 Para acompanhar candidaturas:
-1. No menu lateral, clique em **"📋 Minhas Candidaturas"**
+1. Na navbar, clique em **"📋 Candidaturas"**
 2. Visualize o histórico com status de cada candidatura
+
+Para editar dados de contato:
+1. Na tela de Candidaturas, clique em **"✏️ Editar dados de contato"**
+2. Atualize telefone, cidade, estado ou data de nascimento
 
 ---
 
-### 6.6 Como Acessar o Banco de Dados
+### 6.6 Como Gerenciar Candidaturas (Recrutador/Admin)
 
-#### Opção A — Via Navegador (API — Recomendado para consultas rápidas)
+1. Faça login com conta de **Admin** ou **Recrutador**
+2. Acesse qualquer vaga e clique em **"Ver detalhes"**
+3. Role até a seção **"👥 Candidatos Inscritos"**
+4. Para cada candidato inscrito são exibidos:
+   - Nome completo, e-mail, telefone e cidade
+   - Data de candidatura e status atual
+5. Para atualizar o status de um candidato:
+   - Selecione o novo status no dropdown (Pendente / Em análise / Aprovado / Reprovado)
+   - Clique em **"Salvar"**
+6. O candidato verá o status atualizado em **"Minhas Candidaturas"**
 
-A API FastAPI fornece documentação interativa automática (Swagger UI):
+---
 
-```
-http://<IP_DO_SERVIDOR>:8000/docs
-```
+### 6.7 Como Acessar o Banco de Dados
 
-Nessa interface é possível executar consultas, criar registros e testar todos os endpoints diretamente pelo navegador.
+#### Opção A — Via Swagger UI (Recomendado)
 
-#### Opção B — Via DB Browser for SQLite (Interface Gráfica)
+A API FastAPI fornece documentação interativa automática:
 
-1. Baixe e instale o **DB Browser for SQLite** gratuitamente em: https://sqlitebrowser.org
-2. No servidor EC2, copie o arquivo do banco para o computador local usando SCP:
+**https://api.alvesmotionlab.com.br/docs**
+
+Nessa interface é possível executar consultas, criar registros e testar todos os endpoints diretamente pelo navegador após autenticação.
+
+#### Opção B — Via Terminal no EasyPanel
+
+1. Acesse **painel.alvesmotionlab.com.br** e faça login
+2. Navegue até o serviço da API
+3. Clique em **"Terminal"**
+4. Execute:
 
 ```bash
-scp -i sua-chave.pem ec2-user@<IP_DO_SERVIDOR>:/home/ec2-user/projeto-integrador/backend/agencia_empregos.db .
-```
+# Acessar o SQLite interativo
+sqlite3 /data/agencia_empregos.db
 
-3. Abra o arquivo `agencia_empregos.db` no DB Browser for SQLite
-4. Navegue pelas tabelas na aba **"Browse Data"** ou execute consultas SQL na aba **"Execute SQL"**
-
-#### Opção C — Via Terminal SSH (Linha de Comando)
-
-1. Conecte-se ao servidor EC2 (ver seção 6.7)
-2. Execute os comandos:
-
-```bash
-cd ~/projeto-integrador/backend
-python3 -c "
-import sqlite3
-conn = sqlite3.connect('agencia_empregos.db')
-cursor = conn.cursor()
-# Exemplo: listar todas as vagas
-cursor.execute('SELECT id, titulo, status FROM vagas')
-for row in cursor.fetchall():
-    print(row)
-conn.close()
-"
+# Exemplos de consultas
+SELECT v.titulo, e.nome, v.status FROM vagas v JOIN empresas e ON v.empresa_id = e.id;
+SELECT status, COUNT(*) FROM candidaturas GROUP BY status;
+SELECT v.titulo, COUNT(c.id) AS inscritos FROM vagas v LEFT JOIN candidaturas c ON c.vaga_id = v.id GROUP BY v.id ORDER BY inscritos DESC;
+.quit
 ```
 
 #### Principais Consultas SQL de Exemplo
@@ -536,102 +610,108 @@ LEFT JOIN candidaturas c ON c.vaga_id = v.id
 GROUP BY v.id
 ORDER BY total_candidaturas DESC;
 
+-- Candidatos de uma vaga específica com contato
+SELECT ca.nome, ca.email, ca.telefone, cu.status, cu.data_candidatura
+FROM candidaturas cu
+JOIN candidatos ca ON ca.id = cu.candidato_id
+WHERE cu.vaga_id = 1;
+
 -- Listar usuários e seus perfis
 SELECT nome, email, perfil FROM usuarios ORDER BY perfil;
 ```
 
 ---
 
-### 6.7 Como Acessar o Servidor (EC2)
+### 6.8 Como Acessar o Servidor (EasyPanel)
 
-O backend está hospedado em uma instância **AWS EC2 t3.micro** com Amazon Linux 2023.
+O backend está hospedado em **VPS Hostinger** gerenciada pelo **EasyPanel**.
 
-#### Acesso via AWS Console (Navegador — sem necessidade de chave SSH)
+#### Acesso ao Painel
 
-1. Acesse https://aws.amazon.com e faça login
-2. Navegue até **EC2 → Instâncias**
-3. Selecione a instância do projeto
-4. Clique em **"Conectar"** → **"EC2 Instance Connect"**
-5. Clique em **"Conectar"** — um terminal abrirá no navegador
+1. Acesse **painel.alvesmotionlab.com.br**
+2. Faça login com as credenciais do EasyPanel
+3. Navegue até o serviço da API
 
-#### Comandos Úteis no Servidor
+#### Ações disponíveis no EasyPanel
 
-```bash
-# Verificar se a API está rodando
-ps aux | grep uvicorn
+| Ação | Como fazer |
+|---|---|
+| Ver logs da API | Aba "Logs" no serviço |
+| Acessar terminal do container | Aba "Terminal" no serviço |
+| Aplicar migration manual | Terminal → `cd /app && alembic upgrade head` |
+| Reiniciar o container | Botão "Restart" no serviço |
+| Ver/editar variáveis de ambiente | Aba "Environment" |
+| Forçar novo deploy | Botão "Deploy" (após `git push`) |
 
-# Ver logs da API em tempo real
-tail -f ~/api.log
+#### Variáveis de Ambiente do Backend
 
-# Reiniciar a API
-pkill -f uvicorn
-cd ~/projeto-integrador/backend
-nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 > ~/api.log 2>&1 &
-
-# Verificar URL do túnel Cloudflare
-grep 'trycloudflare.com' ~/tunnel.log | tail -1
-
-# Reiniciar o túnel Cloudflare
-pkill cloudflared
-nohup cloudflared tunnel --url http://localhost:8000 > ~/tunnel.log 2>&1 &
-
-# Atualizar o código do GitHub
-cd ~/projeto-integrador
-git pull https://joaovitor1110:<TOKEN>@github.com/joaovitor1110/projeto-integrador.git main
-
-# Aplicar migrações do banco de dados
-cd ~/projeto-integrador/backend
-alembic upgrade head
-```
+| Variável | Valor | Descrição |
+|---|---|---|
+| `DATABASE_URL` | sqlite:////data/agencia_empregos.db | Caminho do banco no volume persistente |
+| `ADMIN_EMAIL` | joao@jvsatech.com.br | E-mail do admin criado automaticamente |
+| `ADMIN_SENHA` | 123456Dd. | Senha do admin criado automaticamente |
+| `ADMIN_NOME` | João Vitor | Nome do admin criado automaticamente |
 
 ---
 
 ## 7. INFRAESTRUTURA E IMPLANTAÇÃO
 
-### 7.1 Servidor Backend (AWS EC2)
+### 7.1 Servidor Backend (EasyPanel + Docker)
 
 | Configuração | Valor |
 |---|---|
-| **Tipo de instância** | t3.micro |
-| **Sistema operacional** | Amazon Linux 2023 |
-| **Região AWS** | us-east-1 (Norte da Virgínia) |
-| **Porta da API** | 8000 (HTTP) |
-| **Servidor ASGI** | Uvicorn (modo background com nohup) |
-| **Banco de dados** | SQLite — arquivo `agencia_empregos.db` |
-| **Gerenciador de ambiente** | Python venv (`~/projeto-integrador/backend/venv`) |
+| **Provedor** | Hostinger VPS |
+| **IP público** | 72.60.51.179 |
+| **Painel de gerenciamento** | EasyPanel (painel.alvesmotionlab.com.br) |
+| **Conteinerização** | Docker (Dockerfile no diretório `/backend`) |
+| **Servidor ASGI** | Uvicorn (porta 8000 interna) |
+| **Banco de dados** | SQLite em volume persistente `/data` |
+| **DNS** | Cloudflare (domínio alvesmotionlab.com.br) |
+| **URL pública** | https://api.alvesmotionlab.com.br |
 
-O processo Uvicorn é iniciado em background com `nohup`, garantindo que continue executando mesmo após o encerramento da sessão SSH:
+O backend é conteinerizado via **Dockerfile**. O EasyPanel monitora o repositório GitHub e realiza o build e deploy automático a cada novo commit. As migrações do Alembic são executadas automaticamente no startup do container (`alembic upgrade head`). Caso o banco esteja vazio, o sistema cria automaticamente o usuário administrador padrão (`_seed_admin()`).
 
-```bash
-nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 > ~/api.log 2>&1 &
+**Dockerfile do backend:**
+
+```dockerfile
+FROM python:3.11-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY . .
+RUN mkdir -p /data
+ENV DATABASE_URL=sqlite:////data/agencia_empregos.db
+RUN alembic upgrade head || true
+EXPOSE 8000
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
 ```
+
+O volume `/data` é configurado no EasyPanel como **Storage persistente**, garantindo que o banco de dados SQLite não seja perdido em redeploys.
 
 ### 7.2 Frontend (Streamlit Cloud)
 
-O frontend está hospedado na plataforma **Streamlit Cloud**, que monitora o repositório GitHub e realiza o deploy automático a cada novo commit na branch `main`. O endereço público é:
+O frontend está hospedado na plataforma **Streamlit Cloud**, que monitora o repositório GitHub e realiza o deploy automático a cada novo commit na branch `main`.
 
 **https://projeto-integrador-senac.streamlit.app**
 
-A URL da API é configurada via **Secrets** do Streamlit Cloud (`.streamlit/secrets.toml`):
+A URL da API é configurada via **Secrets** do Streamlit Cloud:
 
 ```toml
-API_URL = "https://<url-do-tunel>.trycloudflare.com"
+API_URL = "https://api.alvesmotionlab.com.br"
 ```
 
-### 7.3 Exposição HTTPS (Cloudflare Tunnel)
+### 7.3 DNS e HTTPS (Cloudflare)
 
-O Streamlit Cloud exige que todas as requisições externas utilizem HTTPS. Como o backend EC2 serve HTTP na porta 8000, utiliza-se o **Cloudflare Tunnel** para criar um endpoint HTTPS público que redireciona para o servidor local:
+O domínio `alvesmotionlab.com.br` utiliza os **nameservers do Cloudflare**, que gerencia o DNS e fornece HTTPS automático para o subdomínio `api.alvesmotionlab.com.br`.
 
-```bash
-nohup cloudflared tunnel --url http://localhost:8000 > ~/tunnel.log 2>&1 &
-```
+| Configuração | Valor |
+|---|---|
+| **Registro DNS** | A — `api` → `72.60.51.179` |
+| **Proxy Cloudflare** | Ativo (modo Proxied — ícone laranja) |
+| **HTTPS** | Automático via Cloudflare SSL |
+| **Porta exposta pelo EasyPanel** | 443 (HTTPS) → 8000 (container) |
 
-O cloudflared gera automaticamente uma URL no formato:
-```
-https://<nome-aleatorio>.trycloudflare.com
-```
-
-Essa URL deve ser atualizada nos Secrets do Streamlit Cloud sempre que o túnel for reiniciado.
+Esta arquitetura elimina a necessidade de certificado SSL próprio no servidor e garante que o Streamlit Cloud (que exige HTTPS em todas as requisições externas) consiga se comunicar com a API.
 
 ### 7.4 Versionamento (GitHub)
 
@@ -639,12 +719,12 @@ O código-fonte é versionado no repositório público:
 
 **https://github.com/joaovitor1110/projeto-integrador**
 
-O fluxo de atualização segue o padrão:
+O fluxo de atualização:
 
-1. Alterações são feitas localmente (ou no ambiente de desenvolvimento)
-2. `git add` + `git commit` + `git push` envia para o GitHub
-3. O Streamlit Cloud detecta o novo commit e realiza o redeploy automático do frontend
-4. No EC2, executa-se `git pull` e reinicia-se o Uvicorn para aplicar as alterações no backend
+1. Alterações são desenvolvidas no ambiente Claude Code (remoto) ou localmente
+2. `git add` + `git commit` + `git push origin main` envia para o GitHub
+3. O **Streamlit Cloud** detecta o novo commit e realiza o redeploy automático do frontend (em ~1–2 minutos)
+4. O **EasyPanel** detecta o novo commit e realiza o rebuild do container Docker do backend
 
 ---
 
@@ -654,25 +734,32 @@ O fluxo de atualização segue o padrão:
 |---|---|---|
 | **1** | Semana 1 | Definição do escopo; modelagem do banco de dados (Diagrama ER); implementação dos modelos SQLAlchemy; configuração do ambiente FastAPI e Uvicorn; implementação da autenticação JWT. |
 | **2** | Semana 2 | Desenvolvimento dos routers da API (vagas, empresas, candidatos, candidaturas); implementação dos schemas Pydantic; configuração do Alembic para migrações; testes dos endpoints via Swagger UI. |
-| **3** | Semana 3 | Desenvolvimento da interface Streamlit (painel de vagas, detalhe, formulários); implantação do backend na AWS EC2; configuração do Cloudflare Tunnel; publicação no Streamlit Cloud; integração e testes end-to-end. |
-| **4** | Semana 4 | Implementação do dashboard analítico; tela de candidaturas para candidatos; gerenciamento de usuários com proteções de segurança; cadastro automático de candidato no registro; criação de usuários de teste; elaboração da documentação ABNT; ajustes finais e apresentação. |
+| **3** | Semana 3 | Desenvolvimento da interface Streamlit (painel de vagas, detalhe, formulários); implantação inicial na AWS EC2 com Cloudflare Tunnel; publicação no Streamlit Cloud; integração e testes end-to-end. |
+| **4** | Semana 4 | Implementação do dashboard analítico; tela de candidaturas para candidatos; gerenciamento de usuários com proteções de segurança; migração do backend para EasyPanel/VPS Hostinger com Docker e domínio próprio; carga de dados de teste (10 empresas, 20 candidatos, 25 vagas, 109 candidaturas). |
+| **5** | Semana 5 | Substituição da sidebar por navbar horizontal; aplicação de fonte Poppins; adição de campo descrição nas vagas; implementação da visão de candidatos inscritos por vaga para recrutadores; endpoint de atualização de status de candidatura; correções de compatibilidade com tema dark; ajustes de UX mobile; elaboração da documentação ABNT; apresentação final. |
 
 ---
 
 ## 9. CONSIDERAÇÕES FINAIS
 
-O projeto **Agência de Empregos** atingiu todos os objetivos propostos, entregando um sistema web completo, funcional e acessível publicamente. A solução demonstra domínio sobre o ciclo completo de desenvolvimento de software: da modelagem do banco de dados à implantação em infraestrutura de nuvem.
+O projeto **Agência de Empregos** atingiu e superou os objetivos propostos, entregando um sistema web completo, funcional e acessível publicamente com domínio próprio e disponibilidade contínua 24/7.
 
 Entre os principais aprendizados técnicos obtidos durante o desenvolvimento, destacam-se:
 
 - Construção de APIs REST com autenticação JWT e controle de acesso por perfis;
-- Gerenciamento de banco de dados relacional com ORM e migrações controladas;
-- Resolução de desafios de infraestrutura (comunicação HTTPS/HTTP entre Streamlit Cloud e EC2 via Cloudflare Tunnel);
-- Gerenciamento de processos em servidor Linux (nohup, background processes);
-- Versionamento colaborativo com Git e GitHub;
-- Desenvolvimento de interfaces web interativas com Streamlit.
+- Gerenciamento de banco de dados relacional com ORM e migrações controladas (Alembic);
+- Conteinerização de aplicações Python com Docker e gerenciamento via EasyPanel;
+- Configuração de DNS, certificado SSL e proxy reverso via Cloudflare;
+- Resolução de desafios de infraestrutura (compatibilidade passlib/bcrypt, volumes persistentes Docker, variáveis de ambiente por perfil);
+- Desenvolvimento de interfaces web interativas e responsivas com Streamlit (navbar, cards, filtros, dashboard);
+- Gerenciamento de fluxo completo de recrutamento: publicação de vaga → candidatura → análise → decisão;
+- Versionamento colaborativo com Git e GitHub com deploy automático.
 
-O sistema encontra-se em plena operação com dados reais de teste, incluindo empresas, vagas com benefícios e requisitos, candidatos e candidaturas, podendo ser demonstrado ao vivo durante a apresentação no endereço **https://projeto-integrador-senac.streamlit.app**.
+O sistema encontra-se em plena operação com dados reais de teste, incluindo 10 empresas de renome (Google Brasil, Nubank, Magazine Luiza, Ambev, Hospital Albert Einstein, Itaú Unibanco, iFood, Embraer, Natura &Co, XP Inc.), 25 vagas em diversas modalidades e contratos, 20 candidatos e mais de 109 candidaturas distribuídas estrategicamente para demonstração das métricas do dashboard.
+
+O sistema pode ser demonstrado ao vivo durante a apresentação em:
+
+**https://projeto-integrador-senac.streamlit.app**
 
 ---
 
@@ -682,17 +769,19 @@ ASSOCIAÇÃO BRASILEIRA DE NORMAS TÉCNICAS. **NBR 6023**: Informação e docume
 
 ASSOCIAÇÃO BRASILEIRA DE NORMAS TÉCNICAS. **NBR 14724**: Informação e documentação — Trabalhos acadêmicos — Apresentação. Rio de Janeiro: ABNT, 2011.
 
-AWS. **Amazon EC2 Documentation**. Disponível em: https://docs.aws.amazon.com/ec2/. Acesso em: jul. 2026.
-
-CLOUDFLARE. **Cloudflare Tunnel Documentation**. Disponível em: https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/. Acesso em: jul. 2026.
+CLOUDFLARE. **Cloudflare DNS Documentation**. Disponível em: https://developers.cloudflare.com/dns/. Acesso em: jul. 2026.
 
 CORONEL, C.; MORRIS, S.; ROB, P. **Sistemas de banco de dados**. São Paulo: Cengage Learning, 2011.
 
 DATE, C. J. **Introdução a sistemas de bancos de dados**. 8. ed. Rio de Janeiro: Elsevier, 2004.
 
+DOCKER. **Docker Documentation**. Disponível em: https://docs.docker.com/. Acesso em: jul. 2026.
+
+EASYPANEL. **EasyPanel Documentation**. Disponível em: https://easypanel.io/docs. Acesso em: jul. 2026.
+
 FASTAPI. **FastAPI Documentation**. Disponível em: https://fastapi.tiangolo.com/. Acesso em: jul. 2026.
 
-GRINBERG, M. **Flask Web Development**: developing web applications with Python. 2. ed. Sebastopol: O'Reilly Media, 2018.
+HOSTINGER. **VPS Hosting Documentation**. Disponível em: https://support.hostinger.com/en/. Acesso em: jul. 2026.
 
 McKINNEY, W. **Python para análise de dados**. São Paulo: Novatec, 2019.
 
