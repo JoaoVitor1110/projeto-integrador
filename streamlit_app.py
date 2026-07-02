@@ -1316,7 +1316,7 @@ Para perguntas gerais sobre carreira, mercado de trabalho, currículo, entrevist
 
                 try:
                     model = genai.GenerativeModel(
-                        model_name="gemini-1.5-flash",
+                        model_name="gemini-2.0-flash",
                         system_instruction=system_prompt,
                     )
                     chat = model.start_chat(history=historico_gemini)
