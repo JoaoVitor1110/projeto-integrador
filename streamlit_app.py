@@ -19,6 +19,17 @@ st.set_page_config(
     layout="wide",
 )
 
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+html, body, [class*="css"], .stApp, .stMarkdown, .stButton, .stSelectbox,
+.stTextInput, .stTextArea, .stNumberInput, .stDateInput, .stCheckbox,
+.stRadio, .stMetric, h1, h2, h3, h4, h5, h6, p, div, span, label {
+    font-family: 'Poppins', sans-serif !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
 # ── Helpers de API ────────────────────────────────────────────────────────────
 
 def _headers():
