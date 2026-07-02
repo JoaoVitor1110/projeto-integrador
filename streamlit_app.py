@@ -358,8 +358,8 @@ def tela_detalhe(vaga_id):
         st.session_state.pop("vaga_aberta", None)
         st.rerun()
 
-    st.markdown(f"# {vaga['titulo']}")
-    st.markdown(f"**{vaga['empresa']['nome']}** — {vaga['local']}")
+    st.markdown(f"### {vaga['titulo']}")
+    st.caption(f"{vaga['empresa']['nome']} — {vaga['local']}")
 
     status_badge = "🟢 Aberta" if vaga["status"] == "aberta" else "⚫ Encerrada"
     st.markdown(f"**Status:** {status_badge}")
