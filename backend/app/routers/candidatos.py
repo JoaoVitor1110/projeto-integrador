@@ -25,3 +25,14 @@ def get_candidato(id: int, db: Session = Depends(get_db)):
     if not candidato:
         raise HTTPException(status_code=404, detail="Candidato não encontrado")
     return candidato
+
+@router.put("/{id}", response_model=CandidatoResponse)
+def update_candidato(id: int, dados: CandidatoCreate, db: Session = Depends(get_db)):
+    candidato = db.query(models.Candidato).filter(models.Candidato.id == id).first()
+    if not candidato:
+        raise HTTPException(status_code=404, detail="Candidato não encontrado")
+    for k, v in dados.model_dump().items():
+        setattr(candidato, k, v)
+    db.commit()
+    db.refresh(candidato)
+    return candidato

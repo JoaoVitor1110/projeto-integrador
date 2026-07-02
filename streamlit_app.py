@@ -182,6 +182,9 @@ def _sidebar():
             if st.button("🏭 Empresas", use_container_width=True):
                 st.session_state.pagina = "empresas"
                 st.rerun()
+            if st.button("👤 Candidatos", use_container_width=True):
+                st.session_state.pagina = "candidatos"
+                st.rerun()
             if st.button("👥 Usuários", use_container_width=True):
                 st.session_state.pagina = "usuarios"
                 st.rerun()
@@ -387,26 +390,26 @@ def tela_detalhe(vaga_id):
 
     col_ben, col_req = st.columns(2)
     with col_ben:
-        st.markdown("### 🎁 Benefícios")
+        st.markdown("**🎁 Benefícios**")
         if vaga.get("beneficios"):
             for b in vaga["beneficios"]:
-                st.markdown(f"- {b['nome']}")
+                st.caption(f"• {b['nome']}")
         else:
             st.caption("Não informado")
 
     with col_req:
-        st.markdown("### 📋 Requisitos")
+        st.markdown("**📋 Requisitos**")
         if vaga.get("requisitos"):
             for r in vaga["requisitos"]:
                 badge = "🔴 Obrigatório" if r["nivel"] == "obrigatorio" else "🔵 Desejável"
-                st.markdown(f"- **{badge}** — {r['descricao']}")
+                st.caption(f"{badge} — {r['descricao']}")
         else:
             st.caption("Não informado")
 
     st.divider()
 
     if pode_escrever:
-        st.markdown("### ⚙️ Ações")
+        st.markdown("**⚙️ Ações**")
         col_enc, col_del = st.columns(2)
         novo_status = "encerrada" if vaga["status"] == "aberta" else "aberta"
         label_btn = "⚫ Encerrar vaga" if vaga["status"] == "aberta" else "🟢 Reabrir vaga"
@@ -690,7 +693,10 @@ def tela_empresas():
                 if emp.get("descricao"):
                     st.caption(emp["descricao"][:80] + "..." if len(emp.get("descricao","")) > 80 else emp.get("descricao",""))
             with col3:
-                if st.button("🗑️ Excluir", key=f"del_emp_{emp['id']}", use_container_width=True):
+                if st.button("✏️", key=f"edit_emp_{emp['id']}", use_container_width=True, help="Editar empresa"):
+                    st.session_state["empresa_editar"] = emp["id"]
+                    st.rerun()
+                if st.button("🗑️", key=f"del_emp_{emp['id']}", use_container_width=True, help="Excluir empresa"):
                     if api_delete(f"/empresas/{emp['id']}"):
                         st.success("Empresa excluída.")
                         st.rerun()
@@ -924,16 +930,145 @@ def tela_editar_vaga(vaga_id):
 
 # ── Roteamento ────────────────────────────────────────────────────────────────
 
+# ── Editar Empresa ────────────────────────────────────────────────────────────
+
+def tela_editar_empresa(empresa_id):
+    _sidebar()
+
+    emp = api_get(f"/empresas/{empresa_id}")
+    if not emp:
+        st.session_state.pop("empresa_editar", None)
+        st.rerun()
+
+    if st.button("← Voltar"):
+        st.session_state.pop("empresa_editar", None)
+        st.rerun()
+
+    st.markdown(f"### ✏️ Editar: {emp['nome']}")
+
+    with st.form("form_editar_empresa"):
+        col1, col2 = st.columns(2)
+        with col1:
+            nome   = st.text_input("Nome *", value=emp["nome"])
+            cnpj   = st.text_input("CNPJ *", value=emp["cnpj"])
+            setor  = st.text_input("Setor *", value=emp["setor"])
+        with col2:
+            cidade = st.text_input("Cidade *", value=emp["cidade"])
+            estado = st.text_input("Estado (UF) *", value=emp["estado"], max_chars=2)
+            descricao = st.text_area("Descrição", value=emp.get("descricao") or "")
+        salvar = st.form_submit_button("Salvar alterações", type="primary")
+
+    if salvar:
+        if not nome or not cnpj or not setor or not cidade or not estado:
+            st.error("Preencha todos os campos obrigatórios.")
+        else:
+            resp = api_put(f"/empresas/{empresa_id}", json={
+                "nome": nome, "cnpj": cnpj, "setor": setor,
+                "cidade": cidade, "estado": estado.upper(), "descricao": descricao or None,
+            })
+            if resp:
+                st.success("✅ Empresa atualizada!")
+                st.session_state.pop("empresa_editar", None)
+                st.rerun()
+
+
+# ── Candidatos (Admin) ────────────────────────────────────────────────────────
+
+def tela_candidatos():
+    _sidebar()
+
+    st.markdown("# 👤 Candidatos")
+
+    candidatos = api_get("/candidatos/")
+    if not candidatos:
+        st.info("Nenhum candidato cadastrado.")
+        return
+
+    st.caption(f"{len(candidatos)} candidato(s) cadastrado(s)")
+    st.divider()
+
+    for c in candidatos:
+        with st.container(border=True):
+            col1, col2, col3 = st.columns([3, 2, 1])
+            with col1:
+                st.markdown(f"**{c['nome']}**")
+                st.caption(c["email"])
+            with col2:
+                info = []
+                if c.get("telefone"): info.append(f"📞 {c['telefone']}")
+                if c.get("cidade"):   info.append(f"📍 {c['cidade']}/{c['estado']}")
+                st.caption("  |  ".join(info) if info else "Sem dados de contato")
+            with col3:
+                if st.button("✏️", key=f"edit_cand_{c['id']}", use_container_width=True, help="Editar"):
+                    st.session_state["candidato_editar"] = c["id"]
+                    st.rerun()
+
+
+def tela_editar_candidato(candidato_id):
+    _sidebar()
+
+    c = api_get(f"/candidatos/{candidato_id}")
+    if not c:
+        st.session_state.pop("candidato_editar", None)
+        st.rerun()
+
+    if st.button("← Voltar"):
+        st.session_state.pop("candidato_editar", None)
+        st.rerun()
+
+    st.markdown(f"### ✏️ Editar: {c['nome']}")
+
+    with st.form("form_editar_candidato"):
+        col1, col2 = st.columns(2)
+        with col1:
+            nome     = st.text_input("Nome *", value=c["nome"])
+            email    = st.text_input("Email *", value=c["email"])
+            telefone = st.text_input("Telefone", value=c.get("telefone") or "")
+        with col2:
+            cidade  = st.text_input("Cidade", value=c.get("cidade") or "")
+            estado  = st.text_input("Estado (UF)", value=c.get("estado") or "", max_chars=2)
+            nasc_val = None
+            if c.get("data_nascimento"):
+                try:
+                    from datetime import date as _date
+                    nasc_val = _date.fromisoformat(c["data_nascimento"])
+                except Exception:
+                    pass
+            nasc = st.date_input("Data de nascimento", value=nasc_val)
+        salvar = st.form_submit_button("Salvar alterações", type="primary")
+
+    if salvar:
+        resp = api_put(f"/candidatos/{candidato_id}", json={
+            "nome": nome, "email": email,
+            "telefone": telefone or None,
+            "cidade": cidade or None,
+            "estado": estado.upper() if estado else None,
+            "data_nascimento": str(nasc) if nasc else None,
+        })
+        if resp:
+            st.success("✅ Candidato atualizado!")
+            st.session_state.pop("candidato_editar", None)
+            st.rerun()
+
+
+# ── Roteamento ────────────────────────────────────────────────────────────────
+
 if not st.session_state.token:
     tela_login()
 elif "vaga_editar" in st.session_state:
     tela_editar_vaga(st.session_state["vaga_editar"])
+elif "empresa_editar" in st.session_state:
+    tela_editar_empresa(st.session_state["empresa_editar"])
+elif "candidato_editar" in st.session_state:
+    tela_editar_candidato(st.session_state["candidato_editar"])
 elif "vaga_aberta" in st.session_state:
     tela_detalhe(st.session_state["vaga_aberta"])
 elif st.session_state.pagina == "dashboard":
     tela_dashboard()
 elif st.session_state.pagina == "empresas":
     tela_empresas()
+elif st.session_state.pagina == "candidatos":
+    tela_candidatos()
 elif st.session_state.pagina == "usuarios":
     tela_usuarios()
 elif st.session_state.pagina == "candidaturas":
