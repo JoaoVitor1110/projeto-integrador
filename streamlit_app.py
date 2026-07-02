@@ -34,69 +34,69 @@ html, body, [class*="css"], .stApp, .stMarkdown, .stButton, .stSelectbox,
 .block-container { padding-top: 0 !important; max-width: 100% !important; }
 /* Navbar topo */
 .navbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: #1565C0;
-    padding: 0 24px;
-    height: 52px;
-    margin-bottom: 0;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    background: #1565C0 !important;
+    padding: 0 24px !important;
+    height: 52px !important;
+    margin-bottom: 0 !important;
 }
 .navbar-brand {
-    color: white;
-    font-size: 17px;
-    font-weight: 700;
-    white-space: nowrap;
+    color: #ffffff !important;
+    font-size: 17px !important;
+    font-weight: 700 !important;
+    white-space: nowrap !important;
 }
 .navbar-user {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    color: rgba(255,255,255,0.9);
-    font-size: 13px;
-    white-space: nowrap;
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    color: #ffffff !important;
+    font-size: 13px !important;
+    white-space: nowrap !important;
 }
 .user-badge {
-    background: rgba(255,255,255,0.2);
-    padding: 3px 10px;
-    border-radius: 20px;
-    font-size: 12px;
-    color: white;
+    background: rgba(255,255,255,0.25) !important;
+    padding: 3px 10px !important;
+    border-radius: 20px !important;
+    font-size: 12px !important;
+    color: #ffffff !important;
 }
-/* Faixa azul dos botões — seleciona o bloco de colunas imediatamente após a navbar */
-#nav-buttons-anchor + div,
-div:has(> #nav-buttons-anchor) + div[data-testid="stHorizontalBlock"] {
-    background: #1565C0 !important;
-}
-/* Torna o elemento âncora invisível */
-#nav-buttons-anchor { display: none; }
 /* Faixa de colunas de navegação */
-div[data-testid="stHorizontalBlock"]:has(button[data-testid="stBaseButton-secondary"][key^="nav_"]) {
+div[data-testid="stHorizontalBlock"]:has(button[data-testid="stBaseButton-secondary"]:first-child) {
     background: #1565C0 !important;
     padding: 4px 16px 12px !important;
     border-radius: 0 0 12px 12px !important;
     box-shadow: 0 3px 10px rgba(0,0,0,0.18) !important;
     margin-bottom: 20px !important;
 }
-/* Botões nav secundários (não-ativos) */
-div[data-testid="stHorizontalBlock"]:has(button[key^="nav_"]) button[data-testid="stBaseButton-secondary"] {
+div[data-testid="stHorizontalBlock"]:has(button[data-testid="stBaseButton-secondary"]:first-child) button[data-testid="stBaseButton-secondary"] {
     background: transparent !important;
     color: rgba(255,255,255,0.88) !important;
     border-color: transparent !important;
     box-shadow: none !important;
 }
-div[data-testid="stHorizontalBlock"]:has(button[key^="nav_"]) button[data-testid="stBaseButton-secondary"]:hover {
+div[data-testid="stHorizontalBlock"]:has(button[data-testid="stBaseButton-secondary"]:first-child) button[data-testid="stBaseButton-secondary"]:hover {
     background: rgba(255,255,255,0.15) !important;
-    color: white !important;
+    color: #ffffff !important;
     border-color: transparent !important;
 }
-/* Botão nav primário (ativo) */
-div[data-testid="stHorizontalBlock"]:has(button[key^="nav_"]) button[data-testid="stBaseButton-primary"] {
+div[data-testid="stHorizontalBlock"]:has(button[data-testid="stBaseButton-secondary"]:first-child) button[data-testid="stBaseButton-primary"] {
     background: rgba(255,255,255,0.25) !important;
-    color: white !important;
+    color: #ffffff !important;
     border-color: transparent !important;
     box-shadow: none !important;
 }
+/* Cards com tema compatível (dark/light) */
+.card-info { background: #1565C020; border-radius: 12px; padding: 16px 20px; margin-bottom: 16px; }
+.card-info .card-title { font-size: 18px; font-weight: 700; }
+.card-info .card-sub { font-size: 13px; opacity: 0.75; margin-top: 4px; }
+.cand-card { border-left: 4px solid; border-radius: 8px; padding: 12px 16px; margin-bottom: 10px; }
+.cand-card-inner { display: flex; justify-content: space-between; align-items: center; }
+.cand-titulo { font-weight: 700; font-size: 15px; }
+.cand-sub { font-size: 13px; opacity: 0.7; margin-top: 2px; }
+.cand-badge { padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; color: #fff; white-space: nowrap; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -872,18 +872,30 @@ def tela_candidaturas():
                 candidato = c
                 break
 
-    if not candidato:
-        st.info("Complete seu perfil com dados de contato para se candidatar às vagas.")
+    def _form_perfil_candidato(candidato=None):
+        is_edit = candidato is not None
+        label_btn = "Salvar alterações" if is_edit else "Salvar perfil"
         with st.form("form_candidato"):
             col1, col2 = st.columns(2)
             with col1:
-                telefone = st.text_input("Telefone")
+                telefone = st.text_input("Telefone", value=candidato.get("telefone") or "" if is_edit else "")
             with col2:
-                cidade = st.text_input("Cidade")
-                estado = st.text_input("Estado (UF)", max_chars=2)
-            nasc = st.date_input("Data de nascimento", value=None)
-            salvar = st.form_submit_button("Salvar perfil", type="primary")
+                cidade = st.text_input("Cidade", value=candidato.get("cidade") or "" if is_edit else "")
+                estado = st.text_input("Estado (UF)", max_chars=2, value=candidato.get("estado") or "" if is_edit else "")
+            nasc_val = None
+            if is_edit and candidato.get("data_nascimento"):
+                try:
+                    from datetime import date as _d
+                    nasc_val = _d.fromisoformat(candidato["data_nascimento"])
+                except Exception:
+                    pass
+            nasc = st.date_input("Data de nascimento", value=nasc_val)
+            salvar = st.form_submit_button(label_btn, type="primary")
+        return telefone, cidade, estado, nasc, salvar
 
+    if not candidato:
+        st.info("Complete seu perfil com dados de contato para se candidatar às vagas.")
+        telefone, cidade, estado, nasc, salvar = _form_perfil_candidato()
         if salvar:
             resp = api_post("/candidatos/", json={
                 "nome": usuario.get("nome"),
@@ -899,25 +911,40 @@ def tela_candidaturas():
         return
 
     # Perfil existente
+    loc = f"📍 {candidato['cidade']}/{candidato['estado']}" if candidato.get("cidade") else ""
+    tel = f"📞 {candidato['telefone']}" if candidato.get("telefone") else ""
+    sub = "  ·  ".join(filter(None, [candidato["email"], tel, loc]))
     st.markdown(f"""
-    <div style="background:#e3f2fd;border-radius:12px;padding:16px 20px;margin-bottom:16px">
-      <div style="font-size:18px;font-weight:700">👤 {candidato['nome']}</div>
-      <div style="color:#555;font-size:13px">✉️ {candidato['email']}
-      {"&nbsp;&nbsp;📞 " + candidato['telefone'] if candidato.get('telefone') else ""}
-      {"&nbsp;&nbsp;📍 " + candidato['cidade'] + "/" + candidato['estado'] if candidato.get('cidade') else ""}
-      </div>
+    <div class="card-info">
+      <div class="card-title">👤 {candidato['nome']}</div>
+      <div class="card-sub">{sub}</div>
     </div>
     """, unsafe_allow_html=True)
+
+    with st.expander("✏️ Editar dados de contato"):
+        telefone, cidade, estado, nasc, salvar = _form_perfil_candidato(candidato)
+        if salvar:
+            resp = api_put(f"/candidatos/{candidato['id']}", json={
+                "nome": candidato["nome"],
+                "email": candidato["email"],
+                "telefone": telefone or None,
+                "cidade": cidade or None,
+                "estado": estado.upper() if estado else None,
+                "data_nascimento": str(nasc) if nasc else None,
+            })
+            if resp:
+                st.success("Dados atualizados!")
+                st.rerun()
 
     st.markdown("### 📄 Minhas Candidaturas")
     candidaturas = api_get("/candidaturas/")
     minhas = [c for c in (candidaturas or []) if c.get("candidato_id") == candidato["id"]]
 
     STATUS_COR = {
-        "pendente":   ("#F9A825", "#fffde7"),
-        "em_analise": ("#1565C0", "#e3f2fd"),
-        "aprovado":   ("#2E7D32", "#e8f5e9"),
-        "reprovado":  ("#B71C1C", "#fce4ec"),
+        "pendente":   "#F9A825",
+        "em_analise": "#1565C0",
+        "aprovado":   "#2E7D32",
+        "reprovado":  "#B71C1C",
     }
     STATUS_LABEL = {
         "pendente": "⏳ Pendente",
@@ -933,20 +960,34 @@ def tela_candidaturas():
             st.rerun()
         return
 
+    # Cache de vagas para evitar múltiplas requisições
+    _vagas_cache = {}
+    def _get_vaga(vaga_id):
+        if vaga_id not in _vagas_cache:
+            v = api_get(f"/vagas/{vaga_id}")
+            _vagas_cache[vaga_id] = v or {}
+        return _vagas_cache[vaga_id]
+
     for cand in minhas:
-        vaga = cand.get("vaga", {})
+        vaga_id = cand.get("vaga_id")
+        vaga_inline = cand.get("vaga") or {}
+        titulo = vaga_inline.get("titulo")
+        empresa_nome = (vaga_inline.get("empresa") or {}).get("nome")
+        # Se faltou título, busca a vaga completa
+        if not titulo and vaga_id:
+            vaga_full = _get_vaga(vaga_id)
+            titulo = vaga_full.get("titulo", "—")
+            empresa_nome = empresa_nome or (vaga_full.get("empresa") or {}).get("nome", "—")
         status = cand.get("status", "pendente")
-        cor, bg = STATUS_COR.get(status, ("#555", "#f5f5f5"))
+        cor = STATUS_COR.get(status, "#555")
         st.markdown(f"""
-        <div style="background:{bg};border-left:4px solid {cor};border-radius:8px;padding:12px 16px;margin-bottom:10px">
-          <div style="display:flex;justify-content:space-between;align-items:center">
+        <div class="cand-card" style="border-color:{cor}">
+          <div class="cand-card-inner">
             <div>
-              <div style="font-weight:700;font-size:15px">{vaga.get('titulo','—')}</div>
-              <div style="color:#555;font-size:13px">🏭 {vaga.get('empresa',{}).get('nome','—')} &nbsp;|&nbsp; 📅 {cand.get('data_candidatura','')}</div>
+              <div class="cand-titulo">{titulo or '—'}</div>
+              <div class="cand-sub">🏭 {empresa_nome or '—'} &nbsp;|&nbsp; 📅 {cand.get('data_candidatura','')}</div>
             </div>
-            <div style="background:{cor};color:white;padding:4px 12px;border-radius:12px;font-size:12px;font-weight:600">
-              {STATUS_LABEL.get(status, status)}
-            </div>
+            <div class="cand-badge" style="background:{cor}">{STATUS_LABEL.get(status, status)}</div>
           </div>
         </div>
         """, unsafe_allow_html=True)
