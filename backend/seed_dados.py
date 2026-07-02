@@ -267,6 +267,7 @@ def main():
             "status": status,
             "data_abertura": data_ab,
             "descricao": f"Vaga de {titulo} em empresa de referência no setor. Ambiente dinâmico e oportunidades de crescimento.",
+            "local": "São Paulo, SP",
             "cidade": "São Paulo",
             "estado": "SP",
             "publico_alvo": "ambos",
