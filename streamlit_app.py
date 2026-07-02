@@ -1271,19 +1271,10 @@ def tela_assistente():
     st.title("🤖 Assistente IA")
     st.caption("Tire dúvidas sobre as vagas do sistema ou sobre carreira e emprego em geral.")
 
-    try:
-        from google import genai
-        from google.genai import types as genai_types
-    except ImportError:
-        st.error("Biblioteca google-genai não instalada. Verifique o requirements.txt e faça o deploy.")
-        return
-
     api_key = st.secrets.get("GEMINI_API_KEY", "")
     if not api_key:
         st.warning("Configure a secret `GEMINI_API_KEY` no Streamlit Cloud para usar o assistente.")
         return
-
-    client = genai.Client(api_key=api_key)
 
     if "chat_historico" not in st.session_state:
         st.session_state.chat_historico = []
@@ -1310,22 +1301,19 @@ Você tem acesso aos dados atuais do sistema:
 Use esses dados para responder perguntas sobre vagas disponíveis, candidaturas e estatísticas.
 Para perguntas gerais sobre carreira, mercado de trabalho, currículo, entrevistas ou emprego, responda com base no seu conhecimento."""
 
-                historico_gemini = []
+                contents = [{"role": "user", "parts": [{"text": system_prompt}]},
+                            {"role": "model", "parts": [{"text": "Entendido! Estou pronto para ajudar."}]}]
                 for m in st.session_state.chat_historico[:-1][-10:]:
                     role = "user" if m["role"] == "user" else "model"
-                    historico_gemini.append(genai_types.Content(role=role, parts=[genai_types.Part(text=m["content"])]))
+                    contents.append({"role": role, "parts": [{"text": m["content"]}]})
+                contents.append({"role": "user", "parts": [{"text": pergunta}]})
 
                 try:
-                    resp = client.models.generate_content(
-                        model="gemini-1.5-flash",
-                        contents=historico_gemini + [genai_types.Content(role="user", parts=[genai_types.Part(text=pergunta)])],
-                        config=genai_types.GenerateContentConfig(
-                            system_instruction=system_prompt,
-                            max_output_tokens=800,
-                            temperature=0.7,
-                        ),
-                    )
-                    resposta = resp.text
+                    url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={api_key}"
+                    payload = {"contents": contents, "generationConfig": {"maxOutputTokens": 800, "temperature": 0.7}}
+                    r = requests.post(url, json=payload, timeout=30)
+                    r.raise_for_status()
+                    resposta = r.json()["candidates"][0]["content"]["parts"][0]["text"]
                 except Exception as e:
                     resposta = f"Erro ao consultar a IA: {e}"
 
