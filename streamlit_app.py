@@ -27,6 +27,65 @@ html, body, [class*="css"], .stApp, .stMarkdown, .stButton, .stSelectbox,
 .stRadio, .stMetric, h1, h2, h3, h4, h5, h6, p, div, span, label {
     font-family: 'Poppins', sans-serif !important;
 }
+/* Esconde a sidebar completamente */
+[data-testid="stSidebar"] { display: none !important; }
+[data-testid="collapsedControl"] { display: none !important; }
+/* Remove padding lateral padrão do Streamlit */
+.block-container { padding-top: 0.5rem !important; max-width: 100% !important; }
+/* Navbar */
+.navbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #1565C0;
+    padding: 0 24px;
+    height: 56px;
+    border-radius: 0 0 12px 12px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+.navbar-brand {
+    color: white;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+}
+.navbar-links {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+.nav-btn {
+    color: rgba(255,255,255,0.85);
+    background: transparent;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: 'Poppins', sans-serif;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+    text-decoration: none;
+}
+.nav-btn:hover { background: rgba(255,255,255,0.15); color: white; }
+.nav-btn.active { background: rgba(255,255,255,0.25); color: white; font-weight: 600; }
+.navbar-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: rgba(255,255,255,0.9);
+    font-size: 13px;
+    white-space: nowrap;
+}
+.user-badge {
+    background: rgba(255,255,255,0.2);
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    color: white;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -161,74 +220,83 @@ def tela_login():
                         st.rerun()
 
 
-# ── Sidebar ───────────────────────────────────────────────────────────────────
+# ── Navbar ────────────────────────────────────────────────────────────────────
 
-def _sidebar():
+def _navbar():
     usuario = st.session_state.usuario
     perfil = usuario["perfil"]
     pode_escrever = perfil in ("admin", "recrutador")
+    pagina_atual = st.session_state.get("pagina", "vagas")
 
-    with st.sidebar:
-        st.markdown(f"**{usuario['nome']}**")
-        st.caption(PERFIL_LABEL.get(perfil, perfil))
-        st.divider()
+    def nav_class(p):
+        return "nav-btn active" if pagina_atual == p else "nav-btn"
 
-        st.markdown("### 📌 Menu")
-        if st.button("💼 Vagas", use_container_width=True):
-            st.session_state.pagina = "vagas"
-            st.session_state.pop("vaga_aberta", None)
-            st.rerun()
+    badge = PERFIL_LABEL.get(perfil, perfil)
 
-        if pode_escrever:
-            if st.button("📊 Dashboard", use_container_width=True):
-                st.session_state.pagina = "dashboard"
+    st.markdown(f"""
+    <div class="navbar">
+        <div class="navbar-brand">💼 Agência de Empregos</div>
+        <div class="navbar-links" id="nav-links"></div>
+        <div class="navbar-user">
+            <span>{usuario['nome']}</span>
+            <span class="user-badge">{badge}</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Botões de navegação via Streamlit (funcional)
+    itens = [("💼 Vagas", "vagas")]
+    if pode_escrever:
+        itens.append(("📊 Dashboard", "dashboard"))
+    if perfil == "admin":
+        itens.append(("🏭 Empresas", "empresas"))
+        itens.append(("👤 Candidatos", "candidatos"))
+        itens.append(("👥 Usuários", "usuarios"))
+    if perfil == "visualizador":
+        itens.append(("📋 Candidaturas", "candidaturas"))
+
+    cols = st.columns(len(itens) + 1)
+    for i, (label, pagina) in enumerate(itens):
+        with cols[i]:
+            if st.button(label, key=f"nav_{pagina}", use_container_width=True):
+                st.session_state.pagina = pagina
+                st.session_state.pop("vaga_aberta", None)
+                st.session_state.pop("vaga_editar", None)
+                st.session_state.pop("empresa_editar", None)
+                st.session_state.pop("candidato_editar", None)
                 st.rerun()
-
-        if perfil == "visualizador":
-            if st.button("📋 Minhas Candidaturas", use_container_width=True):
-                st.session_state.pagina = "candidaturas"
-                st.rerun()
-
-        if perfil == "admin":
-            if st.button("🏭 Empresas", use_container_width=True):
-                st.session_state.pagina = "empresas"
-                st.rerun()
-            if st.button("👤 Candidatos", use_container_width=True):
-                st.session_state.pagina = "candidatos"
-                st.rerun()
-            if st.button("👥 Usuários", use_container_width=True):
-                st.session_state.pagina = "usuarios"
-                st.rerun()
-
-        st.divider()
-
-        if perfil in ("admin", "recrutador"):
-            st.markdown("### 🔍 Filtros")
-        else:
-            st.markdown("### 🔍 Filtros")
-
-        modalidade = st.selectbox(
-            "Modalidade",
-            ["", "presencial", "remoto", "hibrido"],
-            format_func=lambda x: "Todas" if x == "" else MODALIDADE_LABEL.get(x, x),
-        )
-        contrato = st.selectbox(
-            "Tipo de contrato",
-            ["", "CLT", "PJ", "temporario", "estagio"],
-            format_func=lambda x: "Todos" if x == "" else CONTRATO_LABEL.get(x, x),
-        )
-        status_filtro = st.selectbox(
-            "Status",
-            ["", "aberta", "encerrada"],
-            format_func=lambda x: "Qualquer" if x == "" else x.capitalize(),
-        )
-        apenas_pcd = st.checkbox("Somente vagas PcD ♿")
-
-        st.divider()
-        if st.button("🚪 Sair", use_container_width=True):
+    with cols[-1]:
+        if st.button("🚪 Sair", key="nav_sair", use_container_width=True):
             st.session_state.clear()
             st.rerun()
 
+
+def _filtros_inline():
+    with st.expander("🔍 Filtros", expanded=False):
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            modalidade = st.selectbox(
+                "Modalidade",
+                ["", "presencial", "remoto", "hibrido"],
+                format_func=lambda x: "Todas" if x == "" else MODALIDADE_LABEL.get(x, x),
+                key="filtro_modalidade",
+            )
+        with col2:
+            contrato = st.selectbox(
+                "Tipo de contrato",
+                ["", "CLT", "PJ", "temporario", "estagio"],
+                format_func=lambda x: "Todos" if x == "" else CONTRATO_LABEL.get(x, x),
+                key="filtro_contrato",
+            )
+        with col3:
+            status_filtro = st.selectbox(
+                "Status",
+                ["", "aberta", "encerrada"],
+                format_func=lambda x: "Qualquer" if x == "" else x.capitalize(),
+                key="filtro_status",
+            )
+        with col4:
+            apenas_pcd = st.checkbox("Somente vagas PcD ♿", key="filtro_pcd")
     return modalidade, contrato, status_filtro, apenas_pcd
 
 
@@ -239,7 +307,8 @@ def tela_painel():
     perfil = usuario["perfil"]
     pode_escrever = perfil in ("admin", "recrutador")
 
-    modalidade, contrato, status_filtro, apenas_pcd = _sidebar()
+    _navbar()
+    modalidade, contrato, status_filtro, apenas_pcd = _filtros_inline()
 
     st.markdown("# 💼 Painel de Vagas")
 
@@ -361,7 +430,7 @@ def tela_detalhe(vaga_id):
     perfil = usuario["perfil"]
     pode_escrever = perfil in ("admin", "recrutador")
 
-    _sidebar()
+    _navbar()
 
     vaga = api_get(f"/vagas/{vaga_id}")
     if not vaga:
@@ -500,7 +569,7 @@ def _kpi(label, valor, cor_fundo, emoji):
 
 
 def tela_dashboard():
-    _sidebar()
+    _navbar()
 
     st.markdown("# 📊 Dashboard")
 
@@ -656,7 +725,7 @@ def tela_dashboard():
 # ── Empresas (Admin) ──────────────────────────────────────────────────────────
 
 def tela_empresas():
-    _sidebar()
+    _navbar()
 
     st.markdown("# 🏭 Gerenciar Empresas")
 
@@ -716,7 +785,7 @@ def tela_empresas():
 # ── Usuários (Admin) ──────────────────────────────────────────────────────────
 
 def tela_usuarios():
-    _sidebar()
+    _navbar()
 
     st.markdown("# 👥 Gerenciar Usuários")
 
@@ -783,7 +852,7 @@ def tela_usuarios():
 # ── Candidaturas (Visualizador) ───────────────────────────────────────────────
 
 def tela_candidaturas():
-    _sidebar()
+    _navbar()
     usuario = st.session_state.usuario
 
     st.markdown("# 📋 Meu Perfil de Candidato")
@@ -879,7 +948,7 @@ def tela_candidaturas():
 # ── Editar Vaga ───────────────────────────────────────────────────────────────
 
 def tela_editar_vaga(vaga_id):
-    _sidebar()
+    _navbar()
 
     vaga = api_get(f"/vagas/{vaga_id}")
     if not vaga:
@@ -942,7 +1011,7 @@ def tela_editar_vaga(vaga_id):
 # ── Editar Empresa ────────────────────────────────────────────────────────────
 
 def tela_editar_empresa(empresa_id):
-    _sidebar()
+    _navbar()
 
     emp = api_get(f"/empresas/{empresa_id}")
     if not emp:
@@ -984,7 +1053,7 @@ def tela_editar_empresa(empresa_id):
 # ── Candidatos (Admin) ────────────────────────────────────────────────────────
 
 def tela_candidatos():
-    _sidebar()
+    _navbar()
 
     st.markdown("# 👤 Candidatos")
 
@@ -1014,7 +1083,7 @@ def tela_candidatos():
 
 
 def tela_editar_candidato(candidato_id):
-    _sidebar()
+    _navbar()
 
     c = api_get(f"/candidatos/{candidato_id}")
     if not c:
