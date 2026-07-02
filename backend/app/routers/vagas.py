@@ -22,6 +22,8 @@ def create_vaga(
     data = vaga.model_dump()
     if data.get("data_publicacao") is None:
         data["data_publicacao"] = date.today()
+    if data.get("data_abertura") is None:
+        data["data_abertura"] = date.today()
     db_vaga = models.Vaga(**data)
     db.add(db_vaga)
     db.commit()
@@ -67,7 +69,11 @@ def update_vaga(
     db_vaga = db.query(models.Vaga).filter(models.Vaga.id == id).first()
     if not db_vaga:
         raise HTTPException(status_code=404, detail="Vaga não encontrada")
-    for k, v in vaga.model_dump().items():
+    data = vaga.model_dump()
+    if data.get("status") == StatusVagaEnum.encerrada and db_vaga.status != StatusVagaEnum.encerrada:
+        if not data.get("data_fechamento"):
+            data["data_fechamento"] = date.today()
+    for k, v in data.items():
         setattr(db_vaga, k, v)
     db.commit()
     db.refresh(db_vaga)

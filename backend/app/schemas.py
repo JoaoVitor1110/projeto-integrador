@@ -46,6 +46,9 @@ class VagaCreate(BaseModel):
     vaga_pcd: bool = False
     status: StatusVagaEnum = StatusVagaEnum.aberta
     data_publicacao: Optional[date] = None
+    data_abertura: Optional[date] = None
+    data_fechamento: Optional[date] = None
+    quantidade_vagas: int = 1
     empresa_id: int
 
 class VagaResponse(VagaCreate):
