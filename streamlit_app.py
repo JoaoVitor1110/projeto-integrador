@@ -786,22 +786,20 @@ def tela_candidaturas():
                 break
 
     if not candidato:
-        st.info("Você ainda não tem um perfil de candidato. Preencha abaixo para poder se candidatar às vagas.")
+        st.info("Complete seu perfil com dados de contato para se candidatar às vagas.")
         with st.form("form_candidato"):
             col1, col2 = st.columns(2)
             with col1:
-                nome_c   = st.text_input("Nome completo *", value=usuario.get("nome", ""))
-                email_c  = st.text_input("Email *", value=usuario.get("email", ""), disabled=True)
                 telefone = st.text_input("Telefone")
             with col2:
-                cidade   = st.text_input("Cidade")
-                estado   = st.text_input("Estado (UF)", max_chars=2)
-                nasc     = st.date_input("Data de nascimento", value=None)
+                cidade = st.text_input("Cidade")
+                estado = st.text_input("Estado (UF)", max_chars=2)
+            nasc = st.date_input("Data de nascimento", value=None)
             salvar = st.form_submit_button("Salvar perfil", type="primary")
 
         if salvar:
             resp = api_post("/candidatos/", json={
-                "nome": nome_c,
+                "nome": usuario.get("nome"),
                 "email": usuario.get("email"),
                 "telefone": telefone or None,
                 "cidade": cidade or None,

@@ -46,6 +46,11 @@ def registro(
         perfil=models.PerfilEnum.visualizador,
     )
     db.add(usuario)
+    db.flush()
+    # cria perfil de candidato automaticamente
+    if not db.query(models.Candidato).filter(models.Candidato.email == dados.email).first():
+        candidato = models.Candidato(nome=dados.nome, email=dados.email)
+        db.add(candidato)
     db.commit()
     db.refresh(usuario)
     token = auth.criar_token(
