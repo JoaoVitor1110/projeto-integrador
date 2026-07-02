@@ -519,8 +519,9 @@ def tela_dashboard():
         for v in vagas:
             m = MODALIDADE_LABEL.get(v["modalidade"], v["modalidade"])
             contagem_mod[m] = contagem_mod.get(m, 0) + 1
-        if contagem_mod:
-            st.bar_chart(contagem_mod, color="#1565C0", height=200)
+        total_mod = sum(contagem_mod.values())
+        for label, val in sorted(contagem_mod.items(), key=lambda x: -x[1]):
+            _barra_horizontal(label, val, total_mod, "#1565C0")
 
     with col_b:
         st.markdown("### 📄 Vagas por Contrato")
@@ -528,8 +529,9 @@ def tela_dashboard():
         for v in vagas:
             c = CONTRATO_LABEL.get(v["tipo_contrato"], v["tipo_contrato"])
             contagem_cont[c] = contagem_cont.get(c, 0) + 1
-        if contagem_cont:
-            st.bar_chart(contagem_cont, color="#2E7D32", height=200)
+        total_cont = sum(contagem_cont.values())
+        for label, val in sorted(contagem_cont.items(), key=lambda x: -x[1]):
+            _barra_horizontal(label, val, total_cont, "#2E7D32")
 
     st.divider()
 
@@ -541,8 +543,9 @@ def tela_dashboard():
         for v in vagas:
             nome = v["empresa"]["nome"]
             contagem_emp[nome] = contagem_emp.get(nome, 0) + 1
-        if contagem_emp:
-            st.bar_chart(contagem_emp, color="#6A1B9A", height=250)
+        total_emp = sum(contagem_emp.values())
+        for label, val in sorted(contagem_emp.items(), key=lambda x: -x[1]):
+            _barra_horizontal(label, val, total_emp, "#6A1B9A")
 
     with col_d:
         st.markdown("### 💰 Salário Médio por Setor")
@@ -553,19 +556,19 @@ def tela_dashboard():
                 setor_salarios.setdefault(setor, []).append(v["salario"])
 
         if setor_salarios:
-            medias = {s: round(sum(vals)/len(vals)) for s, vals in setor_salarios.items()}
-            st.bar_chart(medias, color="#E65100", height=250)
             maior = max(sum(s)/len(s) for s in setor_salarios.values())
-            cores_sal = ["#E65100","#F57C00","#FB8C00","#FFA726","#FFCC80"]
-            for i, (setor, salarios) in enumerate(sorted(setor_salarios.items(), key=lambda x: -sum(x[1])/len(x[1]))):
+            for setor, salarios in sorted(setor_salarios.items(), key=lambda x: -sum(x[1])/len(x[1])):
                 media = sum(salarios) / len(salarios)
                 media_fmt = f"R$ {media:,.0f}".replace(",", ".")
                 pct = media / maior * 100
                 st.markdown(f"""
-                <div style="margin-bottom:6px">
-                  <div style="display:flex;justify-content:space-between">
-                    <span style="font-size:12px;color:#555">{setor}</span>
-                    <span style="font-size:12px;font-weight:600">{media_fmt}</span>
+                <div style="margin-bottom:8px">
+                  <div style="display:flex;justify-content:space-between;margin-bottom:2px">
+                    <span style="font-size:13px">{setor}</span>
+                    <span style="font-size:13px;font-weight:600">{media_fmt}</span>
+                  </div>
+                  <div style="background:#e0e0e0;border-radius:6px;height:18px">
+                    <div style="background:#E65100;width:{pct:.0f}%;height:18px;border-radius:6px"></div>
                   </div>
                 </div>
                 """, unsafe_allow_html=True)
@@ -858,10 +861,73 @@ def tela_candidaturas():
         """, unsafe_allow_html=True)
 
 
+# ── Editar Vaga ───────────────────────────────────────────────────────────────
+
+def tela_editar_vaga(vaga_id):
+    _sidebar()
+
+    vaga = api_get(f"/vagas/{vaga_id}")
+    if not vaga:
+        st.session_state.pop("vaga_editar", None)
+        st.rerun()
+
+    if st.button("← Voltar"):
+        st.session_state.pop("vaga_editar", None)
+        st.rerun()
+
+    st.markdown(f"### ✏️ Editar: {vaga['titulo']}")
+
+    empresas = api_get("/empresas/") or []
+    empresa_opcoes = {e["nome"]: e["id"] for e in empresas}
+    empresa_atual = next((e["nome"] for e in empresas if e["id"] == vaga["empresa_id"]), None)
+
+    with st.form("form_editar_vaga"):
+        col1, col2 = st.columns(2)
+        with col1:
+            titulo   = st.text_input("Título *", value=vaga["titulo"])
+            local    = st.text_input("Local *", value=vaga["local"])
+            salario  = st.number_input("Salário (R$)", min_value=0.0, step=100.0, value=float(vaga["salario"] or 0))
+            qtd      = st.number_input("Quantidade de vagas", min_value=1, step=1, value=vaga.get("quantidade_vagas", 1))
+            empresa_nome = st.selectbox("Empresa *", list(empresa_opcoes.keys()),
+                                        index=list(empresa_opcoes.keys()).index(empresa_atual) if empresa_atual else 0)
+        with col2:
+            modalidades = ["presencial", "remoto", "hibrido"]
+            contratos   = ["CLT", "PJ", "temporario", "estagio"]
+            publicos    = ["ambos", "masculino", "feminino"]
+            modalidade    = st.selectbox("Modalidade", modalidades,
+                                         index=modalidades.index(vaga["modalidade"]))
+            tipo_contrato = st.selectbox("Tipo de contrato", contratos,
+                                         index=contratos.index(vaga["tipo_contrato"]))
+            publico_alvo  = st.selectbox("Público-alvo", publicos,
+                                         index=publicos.index(vaga.get("publico_alvo", "ambos")))
+            horario = st.text_input("Horário", value=vaga.get("horario") or "")
+        vaga_pcd = st.checkbox("Vaga PcD", value=vaga.get("vaga_pcd", False))
+        status   = st.selectbox("Status", ["aberta", "encerrada"],
+                                 index=0 if vaga["status"] == "aberta" else 1)
+        salvar = st.form_submit_button("Salvar alterações", type="primary")
+
+    if salvar:
+        dados = {
+            "titulo": titulo, "local": local, "salario": salario or None,
+            "modalidade": modalidade, "tipo_contrato": tipo_contrato,
+            "publico_alvo": publico_alvo, "horario": horario or None,
+            "vaga_pcd": vaga_pcd, "status": status,
+            "quantidade_vagas": int(qtd),
+            "empresa_id": empresa_opcoes[empresa_nome],
+        }
+        resp = api_put(f"/vagas/{vaga_id}", json=dados)
+        if resp:
+            st.success("✅ Vaga atualizada!")
+            st.session_state.pop("vaga_editar", None)
+            st.rerun()
+
+
 # ── Roteamento ────────────────────────────────────────────────────────────────
 
 if not st.session_state.token:
     tela_login()
+elif "vaga_editar" in st.session_state:
+    tela_editar_vaga(st.session_state["vaga_editar"])
 elif "vaga_aberta" in st.session_state:
     tela_detalhe(st.session_state["vaga_aberta"])
 elif st.session_state.pagina == "dashboard":
