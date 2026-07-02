@@ -283,16 +283,20 @@ def _card_vaga(vaga, pode_escrever=False):
         )
         st.markdown(f"**{salario}**")
 
-        col_btn1, col_btn2 = st.columns(2) if pode_escrever else (st, None)
-        with col_btn1:
-            if st.button("Ver detalhes", key=f"det_{vaga['id']}", use_container_width=True):
-                st.session_state["vaga_aberta"] = vaga["id"]
-                st.rerun()
-        if pode_escrever and col_btn2:
+        if pode_escrever:
+            col_btn1, col_btn2 = st.columns(2)
+            with col_btn1:
+                if st.button("Ver detalhes", key=f"det_{vaga['id']}", use_container_width=True):
+                    st.session_state["vaga_aberta"] = vaga["id"]
+                    st.rerun()
             with col_btn2:
                 if st.button("✏️ Editar", key=f"edit_{vaga['id']}", use_container_width=True):
                     st.session_state["vaga_editar"] = vaga["id"]
                     st.rerun()
+        else:
+            if st.button("Ver detalhes", key=f"det_{vaga['id']}", use_container_width=True):
+                st.session_state["vaga_aberta"] = vaga["id"]
+                st.rerun()
 
 
 def _form_nova_vaga():
