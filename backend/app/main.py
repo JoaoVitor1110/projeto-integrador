@@ -1,11 +1,32 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.database import Base, engine
+from app.database import Base, engine, SessionLocal
 from app import models  # noqa: F401 - registers models
 from app.routers import empresas, vagas, candidatos, candidaturas
 from app.routers import auth as auth_router
+from app.auth import hash_senha
 
 Base.metadata.create_all(bind=engine)
+
+def _seed_admin():
+    db = SessionLocal()
+    try:
+        if db.query(models.Usuario).count() == 0:
+            admin_email = os.getenv("ADMIN_EMAIL", "joao@jvsatech.com.br")
+            admin_senha = os.getenv("ADMIN_SENHA", "123456Dd.")
+            admin_nome = os.getenv("ADMIN_NOME", "João Vitor")
+            db.add(models.Usuario(
+                nome=admin_nome,
+                email=admin_email,
+                senha_hash=hash_senha(admin_senha),
+                perfil=models.PerfilEnum.admin,
+            ))
+            db.commit()
+    finally:
+        db.close()
+
+_seed_admin()
 
 app = FastAPI(title="Agência de Empregos API")
 

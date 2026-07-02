@@ -7,7 +7,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-RUN alembic upgrade head
+RUN mkdir -p /data
+
+ENV DATABASE_URL=sqlite:////data/agencia_empregos.db
+
+RUN alembic upgrade head || true
 
 EXPOSE 8000
 
