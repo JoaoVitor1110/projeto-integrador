@@ -94,7 +94,7 @@ if "pagina" not in st.session_state:
 
 MODALIDADE_LABEL = {"presencial": "🏢 Presencial", "remoto": "🏠 Remoto", "hibrido": "🔄 Híbrido"}
 CONTRATO_LABEL   = {"CLT": "CLT", "PJ": "PJ", "temporario": "Temporário", "estagio": "Estágio"}
-PERFIL_LABEL     = {"admin": "👑 Admin", "recrutador": "📋 Recrutador", "visualizador": "👁 Visualizador"}
+PERFIL_LABEL     = {"admin": "👑 Admin", "recrutador": "📋 Recrutador", "visualizador": "🙋 Candidato"}
 
 # ── Tela de Login ─────────────────────────────────────────────────────────────
 
@@ -708,7 +708,11 @@ def tela_usuarios():
                 email_u = st.text_input("Email *")
             with col2:
                 senha_u = st.text_input("Senha *", type="password")
-                perfil_u = st.selectbox("Perfil", ["visualizador", "recrutador", "admin"])
+                perfil_u = st.selectbox(
+                    "Perfil",
+                    ["visualizador", "recrutador", "admin"],
+                    format_func=lambda x: {"visualizador": "Candidato", "recrutador": "Recrutador", "admin": "Admin"}.get(x, x),
+                )
             salvar_u = st.form_submit_button("Criar usuário", type="primary")
 
         if salvar_u:
