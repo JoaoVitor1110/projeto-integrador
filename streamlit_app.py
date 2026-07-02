@@ -1272,17 +1272,17 @@ def tela_assistente():
     st.caption("Tire dúvidas sobre as vagas do sistema ou sobre carreira e emprego em geral.")
 
     try:
-        from openai import OpenAI
+        import google.generativeai as genai
     except ImportError:
-        st.error("Biblioteca OpenAI não instalada. Adicione `openai` ao requirements.txt e faça o deploy.")
+        st.error("Biblioteca google-generativeai não instalada. Verifique o requirements.txt e faça o deploy.")
         return
 
-    api_key = st.secrets.get("OPENAI_API_KEY", "")
+    api_key = st.secrets.get("GEMINI_API_KEY", "")
     if not api_key:
-        st.warning("Configure a secret `OPENAI_API_KEY` no Streamlit Cloud para usar o assistente.")
+        st.warning("Configure a secret `GEMINI_API_KEY` no Streamlit Cloud para usar o assistente.")
         return
 
-    client = OpenAI(api_key=api_key)
+    genai.configure(api_key=api_key)
 
     if "chat_historico" not in st.session_state:
         st.session_state.chat_historico = []
@@ -1309,18 +1309,19 @@ Você tem acesso aos dados atuais do sistema:
 Use esses dados para responder perguntas sobre vagas disponíveis, candidaturas e estatísticas.
 Para perguntas gerais sobre carreira, mercado de trabalho, currículo, entrevistas ou emprego, responda com base no seu conhecimento."""
 
-                messages = [{"role": "system", "content": system_prompt}]
-                for m in st.session_state.chat_historico[-10:]:
-                    messages.append(m)
+                historico_gemini = []
+                for m in st.session_state.chat_historico[:-1][-10:]:
+                    role = "user" if m["role"] == "user" else "model"
+                    historico_gemini.append({"role": role, "parts": [m["content"]]})
 
                 try:
-                    resp = client.chat.completions.create(
-                        model="gpt-4o-mini",
-                        messages=messages,
-                        max_tokens=800,
-                        temperature=0.7,
+                    model = genai.GenerativeModel(
+                        model_name="gemini-1.5-flash",
+                        system_instruction=system_prompt,
                     )
-                    resposta = resp.choices[0].message.content
+                    chat = model.start_chat(history=historico_gemini)
+                    resp = chat.send_message(pergunta)
+                    resposta = resp.text
                 except Exception as e:
                     resposta = f"Erro ao consultar a IA: {e}"
 
