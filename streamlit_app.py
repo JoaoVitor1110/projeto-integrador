@@ -245,6 +245,7 @@ def _navbar():
         itens.append(("👥 Usuários", "usuarios"))
     if perfil == "visualizador":
         itens.append(("📋 Candidaturas", "candidaturas"))
+    itens.append(("🤖 Assistente", "assistente"))
 
     # Renderiza navbar e botões em um único container azul
     st.markdown(f"""
@@ -1233,6 +1234,105 @@ def tela_editar_candidato(candidato_id):
             st.rerun()
 
 
+# ── Assistente IA ─────────────────────────────────────────────────────────────
+
+def _contexto_sistema():
+    """Busca dados do backend para montar contexto da IA."""
+    token = st.session_state.token
+    h = {"Authorization": f"Bearer {token}"}
+    linhas = []
+    try:
+        vagas = requests.get(f"{API}/vagas/", headers=h, timeout=10).json()
+        abertas = [v for v in vagas if v.get("status") == "aberta"]
+        linhas.append(f"Total de vagas cadastradas: {len(vagas)} ({len(abertas)} abertas, {len(vagas)-len(abertas)} encerradas).")
+        for v in abertas[:15]:
+            empresa = v.get("empresa", {}).get("nome", "N/A") if isinstance(v.get("empresa"), dict) else "N/A"
+            linhas.append(
+                f"- Vaga: {v['titulo']} | Empresa: {empresa} | "
+                f"Modalidade: {v.get('modalidade','')} | Contrato: {v.get('tipo_contrato','')} | "
+                f"Salário: R$ {v.get('salario', 0):,.0f} | PcD: {'Sim' if v.get('vaga_pcd') else 'Não'}"
+            )
+    except Exception:
+        linhas.append("Não foi possível obter dados de vagas.")
+    try:
+        cands = requests.get(f"{API}/candidaturas/", headers=h, timeout=10).json()
+        linhas.append(f"\nTotal de candidaturas no sistema: {len(cands)}.")
+        from collections import Counter
+        status_count = Counter(c.get("status") for c in cands)
+        for s, n in status_count.items():
+            linhas.append(f"  - {s}: {n}")
+    except Exception:
+        pass
+    return "\n".join(linhas)
+
+
+def tela_assistente():
+    _navbar()
+    st.title("🤖 Assistente IA")
+    st.caption("Tire dúvidas sobre as vagas do sistema ou sobre carreira e emprego em geral.")
+
+    try:
+        from openai import OpenAI
+    except ImportError:
+        st.error("Biblioteca OpenAI não instalada. Adicione `openai` ao requirements.txt e faça o deploy.")
+        return
+
+    api_key = st.secrets.get("OPENAI_API_KEY", "")
+    if not api_key:
+        st.warning("Configure a secret `OPENAI_API_KEY` no Streamlit Cloud para usar o assistente.")
+        return
+
+    client = OpenAI(api_key=api_key)
+
+    if "chat_historico" not in st.session_state:
+        st.session_state.chat_historico = []
+
+    for msg in st.session_state.chat_historico:
+        with st.chat_message(msg["role"]):
+            st.markdown(msg["content"])
+
+    pergunta = st.chat_input("Digite sua pergunta...")
+    if pergunta:
+        st.session_state.chat_historico.append({"role": "user", "content": pergunta})
+        with st.chat_message("user"):
+            st.markdown(pergunta)
+
+        with st.chat_message("assistant"):
+            with st.spinner("Pensando..."):
+                contexto = _contexto_sistema()
+                system_prompt = f"""Você é um assistente especializado em recrutamento e emprego da Agência de Empregos.
+Responda em português, de forma clara e objetiva.
+Você tem acesso aos dados atuais do sistema:
+
+{contexto}
+
+Use esses dados para responder perguntas sobre vagas disponíveis, candidaturas e estatísticas.
+Para perguntas gerais sobre carreira, mercado de trabalho, currículo, entrevistas ou emprego, responda com base no seu conhecimento."""
+
+                messages = [{"role": "system", "content": system_prompt}]
+                for m in st.session_state.chat_historico[-10:]:
+                    messages.append(m)
+
+                try:
+                    resp = client.chat.completions.create(
+                        model="gpt-4o-mini",
+                        messages=messages,
+                        max_tokens=800,
+                        temperature=0.7,
+                    )
+                    resposta = resp.choices[0].message.content
+                except Exception as e:
+                    resposta = f"Erro ao consultar a IA: {e}"
+
+                st.markdown(resposta)
+                st.session_state.chat_historico.append({"role": "assistant", "content": resposta})
+
+    if st.session_state.chat_historico:
+        if st.button("🗑️ Limpar conversa", key="limpar_chat"):
+            st.session_state.chat_historico = []
+            st.rerun()
+
+
 # ── Roteamento ────────────────────────────────────────────────────────────────
 
 if not st.session_state.token:
@@ -1255,5 +1355,7 @@ elif st.session_state.pagina == "usuarios":
     tela_usuarios()
 elif st.session_state.pagina == "candidaturas":
     tela_candidaturas()
+elif st.session_state.pagina == "assistente":
+    tela_assistente()
 else:
     tela_painel()
