@@ -395,6 +395,31 @@ def tela_detalhe(vaga_id):
 
 # ── Dashboard ─────────────────────────────────────────────────────────────────
 
+def _barra_horizontal(label, valor, total, cor="#1f77b4"):
+    pct = valor / total * 100 if total else 0
+    st.markdown(f"""
+    <div style="margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:2px">
+        <span style="font-size:13px">{label}</span>
+        <span style="font-size:13px;font-weight:600">{valor} ({pct:.0f}%)</span>
+      </div>
+      <div style="background:#e0e0e0;border-radius:6px;height:18px">
+        <div style="background:{cor};width:{pct}%;height:18px;border-radius:6px;transition:width 0.3s"></div>
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+
+def _kpi(label, valor, cor_fundo, emoji):
+    st.markdown(f"""
+    <div style="background:{cor_fundo};border-radius:12px;padding:16px 20px;text-align:center;margin-bottom:8px">
+      <div style="font-size:28px">{emoji}</div>
+      <div style="font-size:28px;font-weight:700;color:#111">{valor}</div>
+      <div style="font-size:12px;color:#555;margin-top:4px">{label}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+
 def tela_dashboard():
     _sidebar()
 
@@ -405,89 +430,129 @@ def tela_dashboard():
     if vagas is None or empresas is None:
         return
 
-    abertas   = [v for v in vagas if v["status"] == "aberta"]
+    abertas    = [v for v in vagas if v["status"] == "aberta"]
     encerradas = [v for v in vagas if v["status"] == "encerrada"]
     total_posicoes = sum(v.get("quantidade_vagas", 1) for v in abertas)
     pcd = [v for v in vagas if v.get("vaga_pcd")]
 
-    # KPIs
+    # KPIs coloridos
     st.markdown("### 📈 Visão Geral")
     c1, c2, c3, c4, c5 = st.columns(5)
-    c1.metric("Total de Vagas", len(vagas))
-    c2.metric("Vagas Abertas", len(abertas))
-    c3.metric("Vagas Encerradas", len(encerradas))
-    c4.metric("Posições Disponíveis", total_posicoes)
-    c5.metric("Vagas PcD", len(pcd))
+    with c1: _kpi("Total de Vagas",        len(vagas),         "#e3f2fd", "💼")
+    with c2: _kpi("Vagas Abertas",         len(abertas),       "#e8f5e9", "🟢")
+    with c3: _kpi("Vagas Encerradas",      len(encerradas),    "#fce4ec", "⚫")
+    with c4: _kpi("Posições Disponíveis",  total_posicoes,     "#fff8e1", "📌")
+    with c5: _kpi("Vagas PcD",             len(pcd),           "#f3e5f5", "♿")
 
     st.divider()
 
     col_a, col_b = st.columns(2)
 
-    # Vagas por modalidade
     with col_a:
         st.markdown("### 🏢 Vagas por Modalidade")
         contagem_mod = {}
         for v in vagas:
             m = MODALIDADE_LABEL.get(v["modalidade"], v["modalidade"])
             contagem_mod[m] = contagem_mod.get(m, 0) + 1
-        for mod, qtd in sorted(contagem_mod.items(), key=lambda x: -x[1]):
-            pct = qtd / len(vagas) * 100
-            st.markdown(f"**{mod}** — {qtd} vaga(s)")
-            st.progress(pct / 100)
+        cores_mod = ["#1565C0", "#2196F3", "#90CAF9"]
+        for i, (mod, qtd) in enumerate(sorted(contagem_mod.items(), key=lambda x: -x[1])):
+            _barra_horizontal(mod, qtd, len(vagas), cores_mod[i % len(cores_mod)])
 
-    # Vagas por tipo de contrato
     with col_b:
         st.markdown("### 📄 Vagas por Contrato")
         contagem_cont = {}
         for v in vagas:
             c = CONTRATO_LABEL.get(v["tipo_contrato"], v["tipo_contrato"])
             contagem_cont[c] = contagem_cont.get(c, 0) + 1
-        for cont, qtd in sorted(contagem_cont.items(), key=lambda x: -x[1]):
-            pct = qtd / len(vagas) * 100
-            st.markdown(f"**{cont}** — {qtd} vaga(s)")
-            st.progress(pct / 100)
+        cores_cont = ["#2E7D32", "#4CAF50", "#A5D6A7", "#C8E6C9"]
+        for i, (cont, qtd) in enumerate(sorted(contagem_cont.items(), key=lambda x: -x[1])):
+            _barra_horizontal(cont, qtd, len(vagas), cores_cont[i % len(cores_cont)])
 
     st.divider()
 
     col_c, col_d = st.columns(2)
 
-    # Vagas por empresa
     with col_c:
         st.markdown("### 🏭 Vagas por Empresa")
         contagem_emp = {}
         for v in vagas:
             nome = v["empresa"]["nome"]
             contagem_emp[nome] = contagem_emp.get(nome, 0) + 1
-        for emp, qtd in sorted(contagem_emp.items(), key=lambda x: -x[1]):
-            st.markdown(f"**{emp}** — {qtd} vaga(s)")
+        cores_emp = ["#6A1B9A","#8E24AA","#AB47BC","#CE93D8","#E1BEE7"]
+        for i, (emp, qtd) in enumerate(sorted(contagem_emp.items(), key=lambda x: -x[1])):
+            _barra_horizontal(emp, qtd, len(vagas), cores_emp[i % len(cores_emp)])
 
-    # Faixa salarial por setor
     with col_d:
         st.markdown("### 💰 Salário Médio por Setor")
         setor_salarios = {}
         for v in vagas:
             if v.get("salario"):
                 setor = v["empresa"].get("setor", "Outros")
-                if setor not in setor_salarios:
-                    setor_salarios[setor] = []
-                setor_salarios[setor].append(v["salario"])
-        for setor, salarios in sorted(setor_salarios.items()):
-            media = sum(salarios) / len(salarios)
-            media_fmt = f"R$ {media:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-            st.markdown(f"**{setor}** — {media_fmt} (média de {len(salarios)} vaga(s))")
+                setor_salarios.setdefault(setor, []).append(v["salario"])
+
+        if setor_salarios:
+            maior = max(sum(s)/len(s) for s in setor_salarios.values())
+            cores_sal = ["#E65100","#F57C00","#FB8C00","#FFA726","#FFCC80"]
+            for i, (setor, salarios) in enumerate(sorted(setor_salarios.items(), key=lambda x: -sum(x[1])/len(x[1]))):
+                media = sum(salarios) / len(salarios)
+                media_fmt = f"R$ {media:,.0f}".replace(",", ".")
+                pct = media / maior * 100
+                st.markdown(f"""
+                <div style="margin-bottom:8px">
+                  <div style="display:flex;justify-content:space-between;margin-bottom:2px">
+                    <span style="font-size:13px">{setor}</span>
+                    <span style="font-size:13px;font-weight:600">{media_fmt}</span>
+                  </div>
+                  <div style="background:#e0e0e0;border-radius:6px;height:18px">
+                    <div style="background:{cores_sal[i % len(cores_sal)]};width:{pct:.0f}%;height:18px;border-radius:6px"></div>
+                  </div>
+                  <div style="font-size:11px;color:#888">{len(salarios)} vaga(s)</div>
+                </div>
+                """, unsafe_allow_html=True)
 
     st.divider()
 
-    # Vagas paradas há muito tempo
+    # Status aberta vs encerrada — mini visual
+    st.markdown("### 📉 Status das Vagas")
+    col_s1, col_s2, col_s3 = st.columns([2, 2, 3])
+    with col_s1:
+        pct_ab = len(abertas) / len(vagas) * 100 if vagas else 0
+        st.markdown(f"""
+        <div style="background:#e8f5e9;border-radius:12px;padding:16px;text-align:center">
+          <div style="font-size:36px;font-weight:700;color:#2E7D32">{pct_ab:.0f}%</div>
+          <div style="color:#555">das vagas estão abertas</div>
+          <div style="font-size:12px;color:#888">{len(abertas)} de {len(vagas)}</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with col_s2:
+        pct_enc = len(encerradas) / len(vagas) * 100 if vagas else 0
+        st.markdown(f"""
+        <div style="background:#fce4ec;border-radius:12px;padding:16px;text-align:center">
+          <div style="font-size:36px;font-weight:700;color:#B71C1C">{pct_enc:.0f}%</div>
+          <div style="color:#555">das vagas estão encerradas</div>
+          <div style="font-size:12px;color:#888">{len(encerradas)} de {len(vagas)}</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with col_s3:
+        pct_pcd = len(pcd) / len(vagas) * 100 if vagas else 0
+        st.markdown(f"""
+        <div style="background:#f3e5f5;border-radius:12px;padding:16px;text-align:center">
+          <div style="font-size:36px;font-weight:700;color:#6A1B9A">{pct_pcd:.0f}%</div>
+          <div style="color:#555">das vagas são PcD</div>
+          <div style="font-size:12px;color:#888">{len(pcd)} de {len(vagas)} vagas inclusivas</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.divider()
+
+    # Alertas de vagas paradas
     st.markdown("### ⚠️ Vagas Abertas Há Muito Tempo")
     hoje = date.today()
     vagas_antigas = []
     for v in abertas:
-        if v.get("data_abertura"):
-            dias = (hoje - date.fromisoformat(v["data_abertura"])).days
-            vagas_antigas.append((v, dias))
-        elif v.get("data_publicacao"):
-            dias = (hoje - date.fromisoformat(v["data_publicacao"])).days
+        ref = v.get("data_abertura") or v.get("data_publicacao")
+        if ref:
+            dias = (hoje - date.fromisoformat(ref)).days
             vagas_antigas.append((v, dias))
 
     vagas_antigas.sort(key=lambda x: -x[1])
@@ -495,8 +560,18 @@ def tela_dashboard():
 
     if alertas:
         for vaga, dias in alertas:
-            cor = "🔴" if dias >= 90 else ("🟡" if dias >= 60 else "🟠")
-            st.markdown(f"{cor} **{vaga['titulo']}** ({vaga['empresa']['nome']}) — {dias} dias aberta")
+            if dias >= 90:
+                cor, bg, icone = "#B71C1C", "#fce4ec", "🔴"
+            elif dias >= 60:
+                cor, bg, icone = "#E65100", "#fff3e0", "🟠"
+            else:
+                cor, bg, icone = "#F9A825", "#fffde7", "🟡"
+            st.markdown(f"""
+            <div style="background:{bg};border-left:4px solid {cor};border-radius:6px;padding:10px 14px;margin-bottom:8px">
+              {icone} <strong>{vaga['titulo']}</strong> — {vaga['empresa']['nome']}
+              <span style="float:right;color:{cor};font-weight:600">{dias} dias aberta</span>
+            </div>
+            """, unsafe_allow_html=True)
     else:
         st.success("✅ Nenhuma vaga aberta há mais de 30 dias.")
 
@@ -588,7 +663,37 @@ def tela_usuarios():
                     st.success(f"✅ Usuário '{resp['nome']}' criado com perfil {resp['perfil']}!")
                     st.rerun()
 
-    st.info("ℹ️ A listagem de usuários requer endpoint adicional na API. Use o banco de dados para consultar diretamente.")
+    usuarios = api_get("/auth/usuarios")
+    if not usuarios:
+        st.info("Nenhum usuário cadastrado.")
+        return
+
+    st.divider()
+    st.caption(f"{len(usuarios)} usuário(s) cadastrado(s)")
+
+    usuario_atual = st.session_state.usuario
+
+    PERFIL_COR = {"admin": "#6A1B9A", "recrutador": "#1565C0", "visualizador": "#2E7D32"}
+
+    for u in usuarios:
+        with st.container(border=True):
+            col1, col2, col3 = st.columns([3, 2, 1])
+            with col1:
+                st.markdown(f"**{u['nome']}**")
+                st.caption(u["email"])
+            with col2:
+                cor = PERFIL_COR.get(u["perfil"], "#555")
+                st.markdown(f"<span style='background:{cor};color:white;padding:2px 10px;border-radius:12px;font-size:12px'>{PERFIL_LABEL.get(u['perfil'], u['perfil'])}</span>", unsafe_allow_html=True)
+            with col3:
+                eh_voce = u["id"] == usuario_atual["id"]
+                if eh_voce:
+                    st.caption("(você)")
+                else:
+                    if st.button("🗑️", key=f"del_usr_{u['id']}", help="Excluir usuário", use_container_width=True):
+                        ok = api_delete(f"/auth/usuarios/{u['id']}")
+                        if ok:
+                            st.success(f"Usuário '{u['nome']}' excluído.")
+                            st.rerun()
 
 
 # ── Roteamento ────────────────────────────────────────────────────────────────
