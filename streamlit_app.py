@@ -31,46 +31,23 @@ html, body, [class*="css"], .stApp, .stMarkdown, .stButton, .stSelectbox,
 [data-testid="stSidebar"] { display: none !important; }
 [data-testid="collapsedControl"] { display: none !important; }
 /* Remove padding lateral padrão do Streamlit */
-.block-container { padding-top: 0.5rem !important; max-width: 100% !important; }
-/* Navbar */
+.block-container { padding-top: 0 !important; max-width: 100% !important; }
+/* Navbar topo */
 .navbar {
     display: flex;
     align-items: center;
     justify-content: space-between;
     background: #1565C0;
     padding: 0 24px;
-    height: 56px;
-    border-radius: 0 0 12px 12px;
-    margin-bottom: 24px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    height: 52px;
+    margin-bottom: 0;
 }
 .navbar-brand {
     color: white;
-    font-size: 18px;
+    font-size: 17px;
     font-weight: 700;
-    letter-spacing: 0.3px;
     white-space: nowrap;
 }
-.navbar-links {
-    display: flex;
-    gap: 4px;
-    align-items: center;
-}
-.nav-btn {
-    color: rgba(255,255,255,0.85);
-    background: transparent;
-    border: none;
-    padding: 6px 14px;
-    border-radius: 8px;
-    font-size: 14px;
-    font-family: 'Poppins', sans-serif;
-    cursor: pointer;
-    transition: all 0.2s;
-    white-space: nowrap;
-    text-decoration: none;
-}
-.nav-btn:hover { background: rgba(255,255,255,0.15); color: white; }
-.nav-btn.active { background: rgba(255,255,255,0.25); color: white; font-weight: 600; }
 .navbar-user {
     display: flex;
     align-items: center;
@@ -85,6 +62,40 @@ html, body, [class*="css"], .stApp, .stMarkdown, .stButton, .stSelectbox,
     border-radius: 20px;
     font-size: 12px;
     color: white;
+}
+/* Faixa azul dos botões — seleciona o bloco de colunas imediatamente após a navbar */
+#nav-buttons-anchor + div,
+div:has(> #nav-buttons-anchor) + div[data-testid="stHorizontalBlock"] {
+    background: #1565C0 !important;
+}
+/* Torna o elemento âncora invisível */
+#nav-buttons-anchor { display: none; }
+/* Faixa de colunas de navegação */
+div[data-testid="stHorizontalBlock"]:has(button[data-testid="stBaseButton-secondary"][key^="nav_"]) {
+    background: #1565C0 !important;
+    padding: 4px 16px 12px !important;
+    border-radius: 0 0 12px 12px !important;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.18) !important;
+    margin-bottom: 20px !important;
+}
+/* Botões nav secundários (não-ativos) */
+div[data-testid="stHorizontalBlock"]:has(button[key^="nav_"]) button[data-testid="stBaseButton-secondary"] {
+    background: transparent !important;
+    color: rgba(255,255,255,0.88) !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+}
+div[data-testid="stHorizontalBlock"]:has(button[key^="nav_"]) button[data-testid="stBaseButton-secondary"]:hover {
+    background: rgba(255,255,255,0.15) !important;
+    color: white !important;
+    border-color: transparent !important;
+}
+/* Botão nav primário (ativo) */
+div[data-testid="stHorizontalBlock"]:has(button[key^="nav_"]) button[data-testid="stBaseButton-primary"] {
+    background: rgba(255,255,255,0.25) !important;
+    color: white !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -227,24 +238,8 @@ def _navbar():
     perfil = usuario["perfil"]
     pode_escrever = perfil in ("admin", "recrutador")
     pagina_atual = st.session_state.get("pagina", "vagas")
-
-    def nav_class(p):
-        return "nav-btn active" if pagina_atual == p else "nav-btn"
-
     badge = PERFIL_LABEL.get(perfil, perfil)
 
-    st.markdown(f"""
-    <div class="navbar">
-        <div class="navbar-brand">💼 Agência de Empregos</div>
-        <div class="navbar-links" id="nav-links"></div>
-        <div class="navbar-user">
-            <span>{usuario['nome']}</span>
-            <span class="user-badge">{badge}</span>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    # Botões de navegação via Streamlit (funcional)
     itens = [("💼 Vagas", "vagas")]
     if pode_escrever:
         itens.append(("📊 Dashboard", "dashboard"))
@@ -255,15 +250,27 @@ def _navbar():
     if perfil == "visualizador":
         itens.append(("📋 Candidaturas", "candidaturas"))
 
+    # Renderiza navbar e botões em um único container azul
+    st.markdown(f"""
+    <div class="navbar">
+        <div class="navbar-brand">💼 Agência de Empregos</div>
+        <div class="navbar-user">
+            <span>{usuario['nome']}</span>
+            <span class="user-badge">{badge}</span>
+        </div>
+    </div>
+    <div class="nav-buttons-row" id="nav-buttons-anchor"></div>
+    """, unsafe_allow_html=True)
+
     cols = st.columns(len(itens) + 1)
     for i, (label, pagina) in enumerate(itens):
         with cols[i]:
-            if st.button(label, key=f"nav_{pagina}", use_container_width=True):
+            ativo = pagina == pagina_atual
+            if st.button(label, key=f"nav_{pagina}", use_container_width=True,
+                         type="primary" if ativo else "secondary"):
                 st.session_state.pagina = pagina
-                st.session_state.pop("vaga_aberta", None)
-                st.session_state.pop("vaga_editar", None)
-                st.session_state.pop("empresa_editar", None)
-                st.session_state.pop("candidato_editar", None)
+                for k in ("vaga_aberta", "vaga_editar", "empresa_editar", "candidato_editar"):
+                    st.session_state.pop(k, None)
                 st.rerun()
     with cols[-1]:
         if st.button("🚪 Sair", key="nav_sair", use_container_width=True):
