@@ -1276,6 +1276,14 @@ def tela_assistente():
         st.warning("Configure a secret `GEMINI_API_KEY` no Streamlit Cloud para usar o assistente.")
         return
 
+    with st.expander("🔧 Modelos disponíveis (debug)", expanded=False):
+        try:
+            r = requests.get(f"https://generativelanguage.googleapis.com/v1/models?key={api_key}", timeout=10)
+            modelos = [m["name"] for m in r.json().get("models", []) if "generateContent" in m.get("supportedGenerationMethods", [])]
+            st.write(modelos)
+        except Exception as e:
+            st.write(f"Erro: {e}")
+
     if "chat_historico" not in st.session_state:
         st.session_state.chat_historico = []
 
