@@ -63,30 +63,26 @@ html, body, [class*="css"], .stApp, .stMarkdown, .stButton, .stSelectbox,
     font-size: 12px !important;
     color: #ffffff !important;
 }
-/* Faixa de colunas de navegação */
-div[data-testid="stHorizontalBlock"]:has(button[data-testid="stBaseButton-secondary"]:first-child) {
+/* Faixa de colunas de navegação — identificada pelo marcador #navbar-btns */
+[data-testid="stMarkdownContainer"]:has(#navbar-btns) + div[data-testid="stHorizontalBlock"],
+[data-testid="stMarkdownContainer"]:has(#navbar-btns) ~ div > div[data-testid="stHorizontalBlock"]:first-child {
     background: #1565C0 !important;
     padding: 4px 16px 12px !important;
     border-radius: 0 0 12px 12px !important;
     box-shadow: 0 3px 10px rgba(0,0,0,0.18) !important;
     margin-bottom: 20px !important;
 }
-div[data-testid="stHorizontalBlock"]:has(button[data-testid="stBaseButton-secondary"]:first-child) button[data-testid="stBaseButton-secondary"] {
+[data-testid="stMarkdownContainer"]:has(#navbar-btns) + div[data-testid="stHorizontalBlock"] button,
+[data-testid="stMarkdownContainer"]:has(#navbar-btns) ~ div > div[data-testid="stHorizontalBlock"]:first-child button {
     background: transparent !important;
     color: rgba(255,255,255,0.88) !important;
     border-color: transparent !important;
     box-shadow: none !important;
 }
-div[data-testid="stHorizontalBlock"]:has(button[data-testid="stBaseButton-secondary"]:first-child) button[data-testid="stBaseButton-secondary"]:hover {
-    background: rgba(255,255,255,0.15) !important;
-    color: #ffffff !important;
-    border-color: transparent !important;
-}
-div[data-testid="stHorizontalBlock"]:has(button[data-testid="stBaseButton-secondary"]:first-child) button[data-testid="stBaseButton-primary"] {
+[data-testid="stMarkdownContainer"]:has(#navbar-btns) + div[data-testid="stHorizontalBlock"] button[data-testid="stBaseButton-primary"],
+[data-testid="stMarkdownContainer"]:has(#navbar-btns) ~ div > div[data-testid="stHorizontalBlock"]:first-child button[data-testid="stBaseButton-primary"] {
     background: rgba(255,255,255,0.25) !important;
     color: #ffffff !important;
-    border-color: transparent !important;
-    box-shadow: none !important;
 }
 /* Cards com tema compatível (dark/light) */
 .card-info { background: #1565C020; border-radius: 12px; padding: 16px 20px; margin-bottom: 16px; }
@@ -259,8 +255,8 @@ def _navbar():
             <span class="user-badge">{badge}</span>
         </div>
     </div>
-    <div class="nav-buttons-row" id="nav-buttons-anchor"></div>
     """, unsafe_allow_html=True)
+    st.markdown('<span id="navbar-btns"></span>', unsafe_allow_html=True)
 
     cols = st.columns(len(itens) + 1)
     for i, (label, pagina) in enumerate(itens):
