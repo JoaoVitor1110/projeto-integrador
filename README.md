@@ -6,7 +6,7 @@
 ![Python](https://img.shields.io/badge/Python-3.11+-blue?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688?logo=fastapi&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-3.x-003B57?logo=sqlite&logoColor=white)
-![AWS EC2](https://img.shields.io/badge/AWS-EC2-FF9900?logo=amazonaws&logoColor=white)
+![EasyPanel](https://img.shields.io/badge/EasyPanel-Hostinger-6C47FF?logo=docker&logoColor=white)
 
 ---
 
@@ -20,9 +20,9 @@ Sem instalação — basta abrir no navegador.
 
 ## 📋 Sobre o Projeto
 
-A **Agência de Empregos** é uma plataforma web que conecta empresas recrutadoras e candidatos. O sistema permite publicar e gerenciar vagas, receber candidaturas e acompanhar todo o processo seletivo por meio de uma interface simples e intuitiva.
+A **Agência de Empregos** é uma plataforma web que conecta empresas recrutadoras e candidatos. O sistema permite publicar e gerenciar vagas, receber candidaturas, acompanhar todo o processo seletivo e contar com um **assistente de IA** para insights e perguntas em linguagem natural.
 
-Desenvolvido como **Projeto Integrador da UC6** do Curso Técnico em Inteligência Artificial do SENAC Lapa Tito, integrando backend REST com FastAPI, banco de dados SQLite e interface web com Streamlit — implantado em infraestrutura real na AWS.
+Desenvolvido como **Projeto Integrador da UC6** do Curso Técnico em Inteligência Artificial do SENAC Lapa Tito, integrando backend REST com FastAPI, banco de dados SQLite, interface web com Streamlit e inteligência artificial via Google Gemini — implantado em infraestrutura real na Hostinger via EasyPanel.
 
 ---
 
@@ -30,17 +30,20 @@ Desenvolvido como **Projeto Integrador da UC6** do Curso Técnico em Inteligênc
 
 | Perfil | Funcionalidades |
 |---|---|
-| 👑 **Admin** | Gerencia usuários, empresas, candidatos e vagas. Acessa o dashboard. |
-| 📋 **Recrutador** | Cadastra e edita vagas, acompanha candidaturas, acessa o dashboard. |
-| 🙋 **Candidato** | Visualiza vagas, se candidata e acompanha o status das candidaturas. |
+| 👑 **Admin** | Gerencia usuários, empresas, candidatos e vagas. Acessa o dashboard e o assistente IA. |
+| 📋 **Recrutador** | Cadastra e edita vagas, acompanha candidaturas, vê candidatos inscritos por vaga, acessa o dashboard. |
+| 🙋 **Candidato** | Visualiza vagas, se candidata, acompanha status das candidaturas e edita dados de contato. |
 
 ### Destaques
 - 🔐 Autenticação com JWT (login seguro por token)
 - 📊 Dashboard com KPIs, gráficos por modalidade, contrato, empresa e salário médio
-- ⚠️ Alertas de vagas abertas há mais de 30/60/90 dias
+- ⚠️ Alertas de vagas abertas há mais de 60 dias
 - ♿ Filtro de vagas PcD
-- 🛡️ Proteções de integridade (admin não pode se excluir; último admin protegido)
+- 🤖 Assistente IA integrado (Google Gemini) — responde perguntas sobre vagas, candidaturas e carreira
+- 👥 Recrutadores visualizam candidatos inscritos por vaga com dados de contato
+- 🔄 Atualização de status de candidatura diretamente na tela da vaga
 - 📝 Auto-cadastro de candidatos com criação automática de perfil
+- 🛡️ Proteções de integridade (admin não pode se excluir; último admin protegido)
 
 ---
 
@@ -48,20 +51,20 @@ Desenvolvido como **Projeto Integrador da UC6** do Curso Técnico em Inteligênc
 
 ```
 ┌─────────────────────────────────────┐
-│     Usuário (Navegador Web)         │
+│        Usuário (Navegador)          │
 └──────────────┬──────────────────────┘
                │ HTTPS
 ┌──────────────▼──────────────────────┐
-│       Streamlit Cloud               │
+│         Streamlit Cloud             │
 │  projeto-integrador-senac.app       │
-│       streamlit_app.py              │
+│  streamlit_app.py + Google Gemini   │
 └──────────────┬──────────────────────┘
-               │ HTTPS via Cloudflare Tunnel
+               │ HTTPS (Cloudflare)
 ┌──────────────▼──────────────────────┐
-│         AWS EC2 t3.micro            │
-│      Amazon Linux 2023              │
-│   FastAPI + Uvicorn  :8000          │
-│   SQLite → agencia_empregos.db      │
+│    Hostinger VPS · EasyPanel        │
+│    Docker container                 │
+│    FastAPI + Uvicorn  :8000         │
+│    SQLite → /data/agencia.db        │
 └─────────────────────────────────────┘
 ```
 
@@ -76,8 +79,9 @@ Desenvolvido como **Projeto Integrador da UC6** do Curso Técnico em Inteligênc
 | **Migrações** | Alembic | Versionamento do schema |
 | **Autenticação** | JWT (python-jose) + bcrypt | Login seguro |
 | **Frontend** | Streamlit | Interface web |
-| **Servidor** | AWS EC2 t3.micro | Hospedagem do backend |
-| **HTTPS** | Cloudflare Tunnel | Exposição segura da API |
+| **IA** | Google Gemini 2.5 Flash | Assistente conversacional |
+| **Servidor** | Hostinger VPS + EasyPanel | Hospedagem do backend em Docker |
+| **HTTPS** | Cloudflare DNS + Proxy | Exposição segura da API |
 | **Deploy frontend** | Streamlit Cloud | Hospedagem do frontend |
 | **Versionamento** | Git + GitHub | Controle de código |
 
@@ -90,7 +94,7 @@ projeto-integrador/
 ├── streamlit_app.py              # Interface web (frontend)
 ├── requirements.txt              # Dependências do frontend
 ├── .streamlit/
-│   └── secrets.toml              # API_URL (não versionado)
+│   └── secrets.toml              # API_URL + GEMINI_API_KEY (não versionado)
 └── backend/
     ├── app/
     │   ├── main.py               # Ponto de entrada da API
@@ -103,10 +107,10 @@ projeto-integrador/
     │       ├── vagas.py          # CRUD de vagas
     │       ├── empresas.py       # CRUD de empresas
     │       ├── candidatos.py     # CRUD de candidatos
-    │       └── candidaturas.py   # CRUD de candidaturas
+    │       └── candidaturas.py   # CRUD de candidaturas + status
     ├── alembic/                  # Migrações do banco
-    ├── requirements.txt          # Dependências do backend
-    └── agencia_empregos.db       # Banco SQLite
+    ├── seed_dados.py             # Script de dados de exemplo
+    └── requirements.txt          # Dependências do backend
 ```
 
 ---
@@ -120,22 +124,15 @@ projeto-integrador/
 ### Backend
 
 ```bash
-# Clone o repositório
 git clone https://github.com/joaovitor1110/projeto-integrador.git
 cd projeto-integrador/backend
 
-# Crie e ative o ambiente virtual
 python3 -m venv venv
 source venv/bin/activate   # Linux/Mac
 venv\Scripts\activate      # Windows
 
-# Instale as dependências
 pip install -r requirements.txt
-
-# Aplique as migrações
 alembic upgrade head
-
-# Inicie a API
 uvicorn app.main:app --reload --port 8000
 ```
 
@@ -144,15 +141,22 @@ API disponível em `http://localhost:8000` · Docs: `http://localhost:8000/docs`
 ### Frontend
 
 ```bash
-# Na raiz do projeto
 pip install -r requirements.txt
 
-# Configure a URL da API
 mkdir -p .streamlit
-echo 'API_URL = "http://localhost:8000"' > .streamlit/secrets.toml
+cat > .streamlit/secrets.toml <<EOF
+API_URL = "http://localhost:8000"
+GEMINI_API_KEY = "sua-chave-aqui"
+EOF
 
-# Inicie o Streamlit
 streamlit run streamlit_app.py
+```
+
+### Popular dados de exemplo
+
+```bash
+cd backend
+python seed_dados.py
 ```
 
 ---
@@ -182,14 +186,16 @@ CANDIDATOS ──── CANDIDATURAS
 | `beneficios` | Benefícios vinculados às vagas |
 | `requisitos` | Requisitos obrigatórios e desejáveis |
 
-### Visualizar o banco (DB Browser for SQLite)
+### Visualizar o banco
 
 ```bash
-# Copiar o banco do servidor EC2 para local
-scp -i sua-chave.pem ec2-user@<IP>:/home/ec2-user/projeto-integrador/backend/agencia_empregos.db .
-```
+# No terminal do EasyPanel — ver dados via SQL
+sqlite3 /data/agencia_empregos.db ".tables"
+sqlite3 /data/agencia_empregos.db "SELECT COUNT(*) FROM vagas;"
 
-Depois abra o arquivo no [DB Browser for SQLite](https://sqlitebrowser.org/) — gratuito.
+# Ou copie o arquivo e abra no DB Browser for SQLite (sqlitebrowser.org)
+cp /data/agencia_empregos.db /app/agencia_empregos.db
+```
 
 ---
 
@@ -208,26 +214,27 @@ Depois abra o arquivo no [DB Browser for SQLite](https://sqlitebrowser.org/) —
 GitHub (branch main)
     │
     ├── Streamlit Cloud → redeploy automático do frontend a cada push
-    └── EC2 → git pull + restart uvicorn (manual)
-
-Cloudflare Tunnel → expõe http://localhost:8000 como HTTPS público
+    └── EasyPanel (Hostinger VPS) → Docker container com FastAPI
+                                    volume /data para o SQLite
 ```
 
-### Comandos úteis no servidor EC2
+**Domínio da API:** `https://api.alvesmotionlab.com.br`
+
+### Comandos úteis no EasyPanel (terminal do container)
 
 ```bash
-# Reiniciar a API
-pkill -f uvicorn
-nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 > ~/api.log 2>&1 &
+# Aplicar migrações
+/opt/venv/bin/alembic upgrade head
 
-# Ver URL atual do túnel Cloudflare
-grep 'trycloudflare.com' ~/tunnel.log | tail -1
+# Popular banco com dados de exemplo
+/opt/venv/bin/pip install requests
+/opt/venv/bin/python /app/seed_dados.py
 
-# Ver logs em tempo real
-tail -f ~/api.log
+# Sincronizar versão do alembic (se necessário)
+/opt/venv/bin/alembic stamp head
 
-# Atualizar código
-git pull https://joaovitor1110:<TOKEN>@github.com/joaovitor1110/projeto-integrador.git main
+# Ver logs da API
+# (via EasyPanel → serviço → Logs)
 ```
 
 ---
@@ -246,8 +253,21 @@ git pull https://joaovitor1110:<TOKEN>@github.com/joaovitor1110/projeto-integrad
 | GET/POST | `/candidatos/` | Listar / criar candidatos | ✅ |
 | GET/PUT | `/candidatos/{id}` | Detalhe / editar candidato | ✅ |
 | GET/POST | `/candidaturas/` | Listar / criar candidaturas | ✅ |
+| PUT | `/candidaturas/{id}/status` | Atualizar status da candidatura | ✅ |
 
-Documentação completa: `http://<servidor>:8000/docs`
+Documentação completa: `https://api.alvesmotionlab.com.br/docs`
+
+---
+
+## 🤖 Assistente IA
+
+O assistente usa o **Google Gemini 2.5 Flash** (gratuito) e tem acesso em tempo real aos dados do sistema:
+
+- Responde perguntas sobre vagas abertas, salários, modalidades e empresas
+- Informa estatísticas de candidaturas por status
+- Responde perguntas gerais sobre carreira, currículo e mercado de trabalho
+
+**Configuração:** adicione `GEMINI_API_KEY` nos secrets do Streamlit Cloud.
 
 ---
 
