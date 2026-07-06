@@ -18,16 +18,16 @@ def h(token):
 
 # ─── EMPRESAS ───────────────────────────────────────────────────────────────
 EMPRESAS = [
-    {"nome": "Google Brasil", "cnpj": "06.990.590/0001-23", "setor": "Tecnologia", "cidade": "São Paulo", "estado": "SP", "site": "google.com.br"},
-    {"nome": "Nubank", "cnpj": "18.236.120/0001-58", "setor": "Fintech", "cidade": "São Paulo", "estado": "SP", "site": "nubank.com.br"},
-    {"nome": "Magazine Luiza", "cnpj": "47.960.950/0001-21", "setor": "Varejo", "cidade": "Franca", "estado": "SP", "site": "magazineluiza.com.br"},
-    {"nome": "Ambev", "cnpj": "07.526.557/0001-00", "setor": "Bebidas / FMCG", "cidade": "São Paulo", "estado": "SP", "site": "ambev.com.br"},
-    {"nome": "Hospital Albert Einstein", "cnpj": "60.765.823/0001-30", "setor": "Saúde", "cidade": "São Paulo", "estado": "SP", "site": "einstein.br"},
-    {"nome": "Itaú Unibanco", "cnpj": "60.872.504/0001-23", "setor": "Financeiro", "cidade": "São Paulo", "estado": "SP", "site": "itau.com.br"},
-    {"nome": "iFood", "cnpj": "14.380.200/0001-21", "setor": "Tecnologia / Delivery", "cidade": "Osasco", "estado": "SP", "site": "ifood.com.br"},
-    {"nome": "Embraer", "cnpj": "07.689.002/0001-89", "setor": "Aeronáutica", "cidade": "São José dos Campos", "estado": "SP", "site": "embraer.com"},
-    {"nome": "Natura &Co", "cnpj": "71.673.990/0001-77", "setor": "Cosméticos", "cidade": "São Paulo", "estado": "SP", "site": "naturaco.com"},
-    {"nome": "XP Inc.", "cnpj": "02.332.886/0001-04", "setor": "Financeiro / Investimentos", "cidade": "São Paulo", "estado": "SP", "site": "xpinc.com"},
+    {"nome": "Google Brasil", "cnpj": "06.990.590/0001-23", "setor": "Tecnologia", "cidade": "São Paulo", "estado": "SP"},
+    {"nome": "Nubank", "cnpj": "18.236.120/0001-58", "setor": "Fintech", "cidade": "São Paulo", "estado": "SP"},
+    {"nome": "Magazine Luiza", "cnpj": "47.960.950/0001-21", "setor": "Varejo", "cidade": "Franca", "estado": "SP"},
+    {"nome": "Ambev", "cnpj": "07.526.557/0001-00", "setor": "Bebidas / FMCG", "cidade": "São Paulo", "estado": "SP"},
+    {"nome": "Hospital Albert Einstein", "cnpj": "60.765.823/0001-30", "setor": "Saúde", "cidade": "São Paulo", "estado": "SP"},
+    {"nome": "Itaú Unibanco", "cnpj": "60.872.504/0001-23", "setor": "Financeiro", "cidade": "São Paulo", "estado": "SP"},
+    {"nome": "iFood", "cnpj": "14.380.200/0001-21", "setor": "Tecnologia / Delivery", "cidade": "Osasco", "estado": "SP"},
+    {"nome": "Embraer", "cnpj": "07.689.002/0001-89", "setor": "Aeronáutica", "cidade": "São José dos Campos", "estado": "SP"},
+    {"nome": "Natura &Co", "cnpj": "71.673.990/0001-77", "setor": "Cosméticos", "cidade": "São Paulo", "estado": "SP"},
+    {"nome": "XP Inc.", "cnpj": "02.332.886/0001-04", "setor": "Financeiro / Investimentos", "cidade": "São Paulo", "estado": "SP"},
 ]
 
 # ─── CANDIDATOS ─────────────────────────────────────────────────────────────
