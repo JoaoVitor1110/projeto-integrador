@@ -1310,7 +1310,7 @@ Para perguntas gerais sobre carreira, mercado de trabalho, currículo, entrevist
 
                 try:
                     url = f"https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key={api_key}"
-                    payload = {"contents": contents, "generationConfig": {"maxOutputTokens": 800, "temperature": 0.7}}
+                    payload = {"contents": contents, "generationConfig": {"maxOutputTokens": 2048, "temperature": 0.7}}
                     r = requests.post(url, json=payload, timeout=30)
                     r.raise_for_status()
                     resposta = r.json()["candidates"][0]["content"]["parts"][0]["text"]
