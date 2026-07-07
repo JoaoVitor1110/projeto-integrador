@@ -3,13 +3,21 @@ Seed de dados fictícios para o dashboard da Agência de Empregos.
 Popula: empresas, usuários/candidatos, vagas, candidaturas.
 """
 import requests
+import os
+import sys
 import json
 import random
 
-API = "https://api.alvesmotionlab.com.br"
+API = os.getenv("SEED_API_URL", "http://localhost:8000")
+ADMIN_EMAIL = os.getenv("SEED_ADMIN_EMAIL")
+ADMIN_SENHA = os.getenv("SEED_ADMIN_SENHA")
+
+if not ADMIN_EMAIL or not ADMIN_SENHA:
+    print("Erro: defina SEED_ADMIN_EMAIL e SEED_ADMIN_SENHA antes de rodar o seed.")
+    sys.exit(1)
 
 def login_admin():
-    r = requests.post(f"{API}/auth/login", data={"username": "joao@jvsatech.com.br", "password": "123456Dd."})
+    r = requests.post(f"{API}/auth/login", data={"username": ADMIN_EMAIL, "password": ADMIN_SENHA})
     r.raise_for_status()
     return r.json()["access_token"]
 

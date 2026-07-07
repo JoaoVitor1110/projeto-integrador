@@ -11,7 +11,9 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app import models
 
-SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key-troque-em-producao")
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    raise RuntimeError("SECRET_KEY environment variable is not set")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 8  # 8 horas
 
