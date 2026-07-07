@@ -1293,13 +1293,13 @@ def tela_assistente():
             with st.spinner("Pensando..."):
                 contexto = _contexto_sistema()
                 system_prompt = f"""Você é um assistente especializado em recrutamento e emprego da Agência de Empregos.
-Responda em português, de forma clara e objetiva.
+Responda em português, de forma clara, objetiva e resumida. Seja conciso — evite listas longas e textos extensos. Máximo 300 palavras por resposta.
 Você tem acesso aos dados atuais do sistema:
 
 {contexto}
 
 Use esses dados para responder perguntas sobre vagas disponíveis, candidaturas e estatísticas.
-Para perguntas gerais sobre carreira, mercado de trabalho, currículo, entrevistas ou emprego, responda com base no seu conhecimento."""
+Para perguntas gerais sobre carreira, mercado de trabalho, currículo, entrevistas ou emprego, responda com base no seu conhecimento de forma resumida."""
 
                 contents = [{"role": "user", "parts": [{"text": system_prompt}]},
                             {"role": "model", "parts": [{"text": "Entendido! Estou pronto para ajudar."}]}]
