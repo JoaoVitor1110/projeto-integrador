@@ -39,11 +39,12 @@ Desenvolvido como **Projeto Integrador da UC6** do Curso Técnico em Inteligênc
 - 📊 Dashboard com KPIs, gráficos por modalidade, contrato, empresa e salário médio
 - ⚠️ Alertas de vagas abertas há mais de 60 dias
 - ♿ Filtro de vagas PcD
-- 🤖 Assistente IA integrado (Google Gemini) — responde perguntas sobre vagas, candidaturas e carreira
+- 🤖 Assistente IA integrado (Google Gemini 2.5 Flash) — responde perguntas sobre vagas, candidaturas e carreira
 - 👥 Recrutadores visualizam candidatos inscritos por vaga com dados de contato
 - 🔄 Atualização de status de candidatura diretamente na tela da vaga
 - 📝 Auto-cadastro de candidatos com criação automática de perfil
 - 🛡️ Proteções de integridade (admin não pode se excluir; último admin protegido)
+- 🔒 Segurança reforçada: credenciais exclusivamente por variáveis de ambiente, CORS restrito, todos os endpoints autenticados
 
 ---
 
@@ -133,6 +134,11 @@ venv\Scripts\activate      # Windows
 
 pip install -r requirements.txt
 alembic upgrade head
+
+export SECRET_KEY="gere-uma-chave-segura-aqui"
+export ADMIN_EMAIL="admin@exemplo.com"
+export ADMIN_SENHA="SuaSenhaForte!"
+
 uvicorn app.main:app --reload --port 8000
 ```
 
@@ -156,8 +162,34 @@ streamlit run streamlit_app.py
 
 ```bash
 cd backend
+pip install requests
+
+SEED_API_URL=http://localhost:8000 \
+SEED_ADMIN_EMAIL=admin@exemplo.com \
+SEED_ADMIN_SENHA=SuaSenhaForte! \
 python seed_dados.py
 ```
+
+---
+
+## 🔐 Variáveis de Ambiente
+
+### Backend (EasyPanel / container)
+
+| Variável | Obrigatória | Descrição |
+|---|---|---|
+| `SECRET_KEY` | ✅ | Chave JWT — string aleatória longa |
+| `ADMIN_EMAIL` | ✅ | E-mail do admin criado na primeira inicialização |
+| `ADMIN_SENHA` | ✅ | Senha do admin (mín. 8 caracteres) |
+| `ADMIN_NOME` | ❌ | Nome do admin (padrão: `Admin`) |
+| `CORS_ORIGINS` | ❌ | Lista separada por vírgula de origens permitidas |
+
+### Frontend (Streamlit Cloud secrets)
+
+| Variável | Descrição |
+|---|---|
+| `API_URL` | URL base do backend (ex: `https://api.alvesmotionlab.com.br`) |
+| `GEMINI_API_KEY` | Chave da API do Google AI Studio |
 
 ---
 
@@ -199,15 +231,6 @@ cp /data/agencia_empregos.db /app/agencia_empregos.db
 
 ---
 
-## 🔑 Credenciais de Teste
-
-| Perfil | E-mail | Senha |
-|---|---|---|
-| 👑 Admin | joao@jvsatech.com.br | 123456Dd. |
-| 🙋 Candidato | ana.lima@email.com | Senha123! |
-
----
-
 ## 🌍 Infraestrutura de Produção
 
 ```
@@ -226,15 +249,14 @@ GitHub (branch main)
 # Aplicar migrações
 /opt/venv/bin/alembic upgrade head
 
-# Popular banco com dados de exemplo
-/opt/venv/bin/pip install requests
+# Popular banco com dados de exemplo (requer pip install requests)
+SEED_API_URL=https://api.alvesmotionlab.com.br \
+SEED_ADMIN_EMAIL=seu@email.com \
+SEED_ADMIN_SENHA=SuaSenha \
 /opt/venv/bin/python /app/seed_dados.py
 
 # Sincronizar versão do alembic (se necessário)
 /opt/venv/bin/alembic stamp head
-
-# Ver logs da API
-# (via EasyPanel → serviço → Logs)
 ```
 
 ---
@@ -253,7 +275,7 @@ GitHub (branch main)
 | GET/POST | `/candidatos/` | Listar / criar candidatos | ✅ |
 | GET/PUT | `/candidatos/{id}` | Detalhe / editar candidato | ✅ |
 | GET/POST | `/candidaturas/` | Listar / criar candidaturas | ✅ |
-| PUT | `/candidaturas/{id}/status` | Atualizar status da candidatura | ✅ |
+| PUT | `/candidaturas/{id}/status` | Atualizar status (admin/recrutador) | ✅ |
 
 Documentação completa: `https://api.alvesmotionlab.com.br/docs`
 
