@@ -1242,7 +1242,7 @@ def _contexto_sistema():
     h = {"Authorization": f"Bearer {token}"}
     linhas = []
     try:
-        vagas = requests.get(f"{API}/vagas/", headers=h, timeout=10).json()
+        vagas = requests.get(f"{API_URL}/vagas/", headers=h, timeout=10).json()
         abertas = [v for v in vagas if v.get("status") == "aberta"]
         linhas.append(f"Total de vagas cadastradas: {len(vagas)} ({len(abertas)} abertas, {len(vagas)-len(abertas)} encerradas).")
         for v in abertas[:15]:
@@ -1255,7 +1255,7 @@ def _contexto_sistema():
     except Exception:
         linhas.append("Não foi possível obter dados de vagas.")
     try:
-        cands = requests.get(f"{API}/candidaturas/", headers=h, timeout=10).json()
+        cands = requests.get(f"{API_URL}/candidaturas/", headers=h, timeout=10).json()
         linhas.append(f"\nTotal de candidaturas no sistema: {len(cands)}.")
         from collections import Counter
         status_count = Counter(c.get("status") for c in cands)
