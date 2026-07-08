@@ -93,6 +93,70 @@ html, body, [class*="css"], .stApp, .stMarkdown, .stButton, .stSelectbox,
 .cand-titulo { font-weight: 700; font-size: 15px; }
 .cand-sub { font-size: 13px; opacity: 0.7; margin-top: 2px; }
 .cand-badge { padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; color: #fff; white-space: nowrap; }
+
+/* ── Dashboard KPI cards ── */
+.kpi-card {
+    background: rgba(255,255,255,.97);
+    border: 1px solid rgba(220,231,243,.95);
+    border-radius: 18px;
+    padding: 18px 20px;
+    box-shadow: 0 10px 28px rgba(8,59,122,.08);
+    transition: .15s ease;
+    margin-bottom: 12px;
+}
+.kpi-card:hover { transform: translateY(-2px); box-shadow: 0 18px 40px rgba(8,59,122,.13); }
+.kpi-label { font-size: 11px; text-transform: uppercase; letter-spacing: .7px; color: #68788e; font-weight: 700; margin-bottom: 6px; }
+.kpi-value { font-size: 36px; font-weight: 900; letter-spacing: -1px; }
+.kpi-val-blue   { color: #0A3D91; }
+.kpi-val-green  { color: #2E7D32; }
+.kpi-val-red    { color: #B71C1C; }
+.kpi-val-orange { color: #E65100; }
+.kpi-val-purple { color: #6A1B9A; }
+.kpi-val-gray   { color: #546e7a; }
+.kpi-border-blue   { border-left: 6px solid #1565C0; }
+.kpi-border-green  { border-left: 6px solid #2E7D32; }
+.kpi-border-red    { border-left: 6px solid #B71C1C; }
+.kpi-border-orange { border-left: 6px solid #E65100; }
+.kpi-border-purple { border-left: 6px solid #6A1B9A; }
+.kpi-border-gray   { border-left: 6px solid #90A4AE; }
+
+/* ── Dashboard bloco ── */
+.bloco {
+    background: rgba(255,255,255,.97);
+    border: 1px solid rgba(220,231,243,.9);
+    border-radius: 18px;
+    padding: 20px 22px;
+    box-shadow: 0 8px 24px rgba(8,59,122,.07);
+    margin-bottom: 16px;
+}
+.bloco-title {
+    font-size: 13px; font-weight: 800; color: #083B7A;
+    text-transform: uppercase; letter-spacing: .5px;
+    margin-bottom: 14px; border-bottom: 1px solid #e0eaf5; padding-bottom: 10px;
+}
+
+/* ── Dashboard bar ── */
+.bar-row { margin: 8px 0; }
+.bar-label { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px; }
+.bar-bg { height: 11px; background: #e8f0f8; border-radius: 999px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 999px; min-width: 2%; }
+
+/* ── Dashboard status line ── */
+.status-line { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #dce7f3; font-size: 13px; }
+.status-line:last-child { border-bottom: none; }
+
+/* ── Dashboard tabela ── */
+.tabela-wrap { overflow-x: auto; border-radius: 14px; border: 1px solid #dce7f3; box-shadow: 0 6px 20px rgba(8,59,122,.06); margin-bottom: 14px; }
+.tabela-wrap table { width: 100%; border-collapse: collapse; background: #fff; min-width: 600px; font-size: 13px; }
+.tabela-wrap th { background: linear-gradient(135deg,#eaf4ff,#dff0ff); color: #083B7A; padding: 10px 12px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .6px; font-weight: 700; border-bottom: 2px solid #d0e6fb; }
+.tabela-wrap td { padding: 9px 12px; border-bottom: 1px solid #e8f0f8; vertical-align: middle; }
+.tabela-wrap tr:hover td { background: #f5f9ff; }
+.tabela-wrap tr:last-child td { border-bottom: none; }
+.linha-atrasada td { background: #fff6f6 !important; }
+.linha-atrasada:hover td { background: #ffe5e5 !important; }
+.dash-badge { display: inline-block; border-radius: 999px; padding: 2px 9px; font-size: 11px; font-weight: 700; }
+.dash-aberta  { background: #e7f1ff; color: #0f4c81; }
+.dash-enc     { background: #eceff3; color: #4d5b6a; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -679,27 +743,21 @@ def tela_detalhe(vaga_id):
 
 # ── Dashboard ─────────────────────────────────────────────────────────────────
 
-def _barra_horizontal(label, valor, total, cor="#1f77b4"):
+def _dash_barra(label, valor, total, cor):
     pct = valor / total * 100 if total else 0
     st.markdown(f"""
-    <div style="margin-bottom:8px">
-      <div style="display:flex;justify-content:space-between;margin-bottom:2px">
-        <span style="font-size:13px">{label}</span>
-        <span style="font-size:13px;font-weight:600">{valor} ({pct:.0f}%)</span>
-      </div>
-      <div style="background:#e0e0e0;border-radius:6px;height:18px">
-        <div style="background:{cor};width:{pct}%;height:18px;border-radius:6px;transition:width 0.3s"></div>
-      </div>
+    <div class="bar-row">
+      <div class="bar-label"><span>{label}</span><span style="font-weight:700">{valor} ({pct:.0f}%)</span></div>
+      <div class="bar-bg"><div class="bar-fill" style="background:{cor};width:{pct:.1f}%"></div></div>
     </div>
     """, unsafe_allow_html=True)
 
 
-def _kpi(label, valor, cor_fundo, emoji):
+def _dash_kpi(label, valor, val_class, border_class):
     st.markdown(f"""
-    <div style="background:{cor_fundo};border-radius:12px;padding:16px 20px;text-align:center;margin-bottom:8px">
-      <div style="font-size:28px">{emoji}</div>
-      <div style="font-size:28px;font-weight:700;color:#111">{valor}</div>
-      <div style="font-size:12px;color:#555;margin-top:4px">{label}</div>
+    <div class="kpi-card {border_class}">
+      <div class="kpi-label">{label}</div>
+      <div class="kpi-value {val_class}">{valor}</div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -707,175 +765,205 @@ def _kpi(label, valor, cor_fundo, emoji):
 def tela_dashboard():
     _navbar()
 
-    st.markdown("# 📊 Dashboard")
-
     usuario_atual = st.session_state.usuario
     perfil_atual = usuario_atual["perfil"]
 
-    # Filtro de recrutador (admin vê todos, recrutador vê só as suas)
-    recrutador_filtro_id = None
-    if perfil_atual == "admin":
-        recs_disp = api_get("/auth/recrutadores") or []
-        rec_dash_map = {"Todos os recrutadores": None}
-        for u in recs_disp:
-            rec_dash_map[u["nome"]] = u["id"]
-        rec_dash_sel = st.selectbox("👤 Filtrar por recrutador", list(rec_dash_map.keys()), key="dash_rec_filter")
-        recrutador_filtro_id = rec_dash_map[rec_dash_sel]
-    elif perfil_atual == "recrutador":
-        recrutador_filtro_id = usuario_atual["id"]
-        st.caption(f"👤 Exibindo suas vagas — {usuario_atual['nome']}")
+    st.markdown("## 📊 Dashboard")
+
+    # ── Filtros ───────────────────────────────────────────────────────────────
+    with st.expander("🔍 Filtros", expanded=True):
+        fc1, fc2, fc3, fc4 = st.columns(4)
+        with fc1:
+            recs_disp = api_get("/auth/recrutadores") or []
+            if perfil_atual == "admin":
+                rec_dash_map = {"Todos os recrutadores": None}
+                for u in recs_disp:
+                    rec_dash_map[u["nome"]] = u["id"]
+                rec_dash_sel = st.selectbox("👤 Recrutador", list(rec_dash_map.keys()), key="dash_rec_filter")
+                recrutador_filtro_id = rec_dash_map[rec_dash_sel]
+            else:
+                recrutador_filtro_id = usuario_atual["id"]
+                st.caption(f"👤 {usuario_atual['nome']}")
+        with fc2:
+            dash_status = st.selectbox("Status", ["Todos", "Abertas", "Encerradas"], key="dash_status")
+        with fc3:
+            dash_modalidade = st.selectbox(
+                "Modalidade", ["Todas", "presencial", "remoto", "hibrido"],
+                format_func=lambda x: "Todas" if x == "Todas" else MODALIDADE_LABEL.get(x, x),
+                key="dash_mod",
+            )
+        with fc4:
+            dash_empresa_opts = ["Todas"]
+            empresas_list = api_get("/empresas/") or []
+            for e in empresas_list:
+                dash_empresa_opts.append(e["nome"])
+            dash_empresa = st.selectbox("Empresa", dash_empresa_opts, key="dash_empresa")
 
     params_vagas = {}
     if recrutador_filtro_id is not None:
         params_vagas["recrutador_id"] = recrutador_filtro_id
 
-    vagas = api_get("/vagas/", params=params_vagas)
-    empresas = api_get("/empresas/")
-    if vagas is None or empresas is None:
+    vagas_raw = api_get("/vagas/", params=params_vagas)
+    if vagas_raw is None:
         return
 
+    # Aplica filtros locais
+    vagas = vagas_raw
+    if dash_status == "Abertas":
+        vagas = [v for v in vagas if v["status"] == "aberta"]
+    elif dash_status == "Encerradas":
+        vagas = [v for v in vagas if v["status"] == "encerrada"]
+    if dash_modalidade != "Todas":
+        vagas = [v for v in vagas if v["modalidade"] == dash_modalidade]
+    if dash_empresa != "Todas":
+        vagas = [v for v in vagas if v["empresa"]["nome"] == dash_empresa]
+
+    hoje = date.today()
     abertas    = [v for v in vagas if v["status"] == "aberta"]
     encerradas = [v for v in vagas if v["status"] == "encerrada"]
     total_posicoes = sum(v.get("quantidade_vagas", 1) for v in abertas)
-    pcd = [v for v in vagas if v.get("vaga_pcd")]
+    pcd        = [v for v in vagas if v.get("vaga_pcd")]
 
-    # KPIs coloridos
-    st.markdown("### 📈 Visão Geral")
+    def _dias(v):
+        ref = v.get("data_abertura") or v.get("data_publicacao")
+        return (hoje - date.fromisoformat(ref)).days if ref else 0
+
+    mais30 = [v for v in abertas if _dias(v) >= 30]
+
+    # ── KPIs ─────────────────────────────────────────────────────────────────
     c1, c2, c3, c4, c5 = st.columns(5)
-    with c1: _kpi("Total de Vagas",        len(vagas),         "#e3f2fd", "💼")
-    with c2: _kpi("Vagas Abertas",         len(abertas),       "#e8f5e9", "🟢")
-    with c3: _kpi("Vagas Encerradas",      len(encerradas),    "#fce4ec", "⚫")
-    with c4: _kpi("Posições Disponíveis",  total_posicoes,     "#fff8e1", "📌")
-    with c5: _kpi("Vagas PcD",             len(pcd),           "#f3e5f5", "♿")
+    with c1: _dash_kpi("Total de Vagas",       len(vagas),        "kpi-val-blue",   "kpi-border-blue")
+    with c2: _dash_kpi("Vagas Abertas",        len(abertas),      "kpi-val-green",  "kpi-border-green")
+    with c3: _dash_kpi("Vagas Encerradas",     len(encerradas),   "kpi-val-gray",   "kpi-border-gray")
+    with c4: _dash_kpi("Posições Disponíveis", total_posicoes,    "kpi-val-orange", "kpi-border-orange")
+    with c5: _dash_kpi("Vagas PcD",            len(pcd),          "kpi-val-purple", "kpi-border-purple")
 
-    st.divider()
-
+    # ── Linha 2: resumo + recrutadores ───────────────────────────────────────
     col_a, col_b = st.columns(2)
 
     with col_a:
-        st.markdown("### 🏢 Vagas por Modalidade")
-        contagem_mod = {}
-        for v in vagas:
-            m = MODALIDADE_LABEL.get(v["modalidade"], v["modalidade"])
-            contagem_mod[m] = contagem_mod.get(m, 0) + 1
-        total_mod = sum(contagem_mod.values())
-        for label, val in sorted(contagem_mod.items(), key=lambda x: -x[1]):
-            _barra_horizontal(label, val, total_mod, "#1565C0")
+        st.markdown('<div class="bloco">', unsafe_allow_html=True)
+        st.markdown('<div class="bloco-title">Resumo por status</div>', unsafe_allow_html=True)
+        pct_ab  = len(abertas)    / len(vagas) * 100 if vagas else 0
+        pct_enc = len(encerradas) / len(vagas) * 100 if vagas else 0
+        pct_pcd = len(pcd)        / len(vagas) * 100 if vagas else 0
+        st.markdown(f'<div class="status-line"><span>Abertas</span><b style="color:#1565C0">{len(abertas)} ({pct_ab:.0f}%)</b></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="status-line"><span>Encerradas</span><b style="color:#546e7a">{len(encerradas)} ({pct_enc:.0f}%)</b></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="status-line"><span>Posições disponíveis</span><b style="color:#E65100">{total_posicoes}</b></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="status-line"><span>Vagas PcD</span><b style="color:#6A1B9A">{len(pcd)} ({pct_pcd:.0f}%)</b></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="status-line"><span>Abertas há +30 dias</span><b style="color:#B71C1C">{len(mais30)}</b></div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
     with col_b:
-        st.markdown("### 📄 Vagas por Contrato")
-        contagem_cont = {}
+        st.markdown('<div class="bloco">', unsafe_allow_html=True)
+        st.markdown('<div class="bloco-title">Vagas por recrutador</div>', unsafe_allow_html=True)
+        rec_count: dict = {}
         for v in vagas:
-            c = CONTRATO_LABEL.get(v["tipo_contrato"], v["tipo_contrato"])
-            contagem_cont[c] = contagem_cont.get(c, 0) + 1
-        total_cont = sum(contagem_cont.values())
-        for label, val in sorted(contagem_cont.items(), key=lambda x: -x[1]):
-            _barra_horizontal(label, val, total_cont, "#2E7D32")
+            r = v.get("recrutador")
+            nome_r = r["nome"] if r else "Sem recrutador"
+            rec_count[nome_r] = rec_count.get(nome_r, 0) + 1
+        total_r = sum(rec_count.values()) or 1
+        for rec, qtd in sorted(rec_count.items(), key=lambda x: -x[1]):
+            _dash_barra(rec, qtd, total_r, "#1565C0")
+        st.markdown('</div>', unsafe_allow_html=True)
 
-    st.divider()
-
+    # ── Linha 3: modalidade + contrato ───────────────────────────────────────
     col_c, col_d = st.columns(2)
 
     with col_c:
-        st.markdown("### 🏭 Vagas por Empresa")
-        contagem_emp = {}
+        st.markdown('<div class="bloco">', unsafe_allow_html=True)
+        st.markdown('<div class="bloco-title">Vagas por modalidade</div>', unsafe_allow_html=True)
+        mod_count: dict = {}
         for v in vagas:
-            nome = v["empresa"]["nome"]
-            contagem_emp[nome] = contagem_emp.get(nome, 0) + 1
-        total_emp = sum(contagem_emp.values())
-        for label, val in sorted(contagem_emp.items(), key=lambda x: -x[1]):
-            _barra_horizontal(label, val, total_emp, "#6A1B9A")
+            m = MODALIDADE_LABEL.get(v["modalidade"], v["modalidade"])
+            mod_count[m] = mod_count.get(m, 0) + 1
+        total_m = sum(mod_count.values()) or 1
+        for lbl, val in sorted(mod_count.items(), key=lambda x: -x[1]):
+            _dash_barra(lbl, val, total_m, "#1565C0")
+        st.markdown('</div>', unsafe_allow_html=True)
 
     with col_d:
-        st.markdown("### 💰 Salário Médio por Setor")
-        setor_salarios = {}
+        st.markdown('<div class="bloco">', unsafe_allow_html=True)
+        st.markdown('<div class="bloco-title">Vagas por tipo de contrato</div>', unsafe_allow_html=True)
+        cont_count: dict = {}
+        for v in vagas:
+            c = CONTRATO_LABEL.get(v["tipo_contrato"], v["tipo_contrato"])
+            cont_count[c] = cont_count.get(c, 0) + 1
+        total_c = sum(cont_count.values()) or 1
+        for lbl, val in sorted(cont_count.items(), key=lambda x: -x[1]):
+            _dash_barra(lbl, val, total_c, "#2E7D32")
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # ── Linha 4: empresa + salário por setor ─────────────────────────────────
+    col_e, col_f = st.columns(2)
+
+    with col_e:
+        st.markdown('<div class="bloco">', unsafe_allow_html=True)
+        st.markdown('<div class="bloco-title">Top empresas por vagas</div>', unsafe_allow_html=True)
+        emp_count: dict = {}
+        for v in vagas:
+            nome = v["empresa"]["nome"]
+            emp_count[nome] = emp_count.get(nome, 0) + 1
+        total_e = sum(emp_count.values()) or 1
+        for lbl, val in sorted(emp_count.items(), key=lambda x: -x[1])[:8]:
+            _dash_barra(lbl, val, total_e, "#6A1B9A")
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    with col_f:
+        st.markdown('<div class="bloco">', unsafe_allow_html=True)
+        st.markdown('<div class="bloco-title">Salário médio por setor</div>', unsafe_allow_html=True)
+        setor_sal: dict = {}
         for v in vagas:
             if v.get("salario"):
                 setor = v["empresa"].get("setor", "Outros")
-                setor_salarios.setdefault(setor, []).append(v["salario"])
-
-        if setor_salarios:
-            maior = max(sum(s)/len(s) for s in setor_salarios.values())
-            for setor, salarios in sorted(setor_salarios.items(), key=lambda x: -sum(x[1])/len(x[1])):
-                media = sum(salarios) / len(salarios)
+                setor_sal.setdefault(setor, []).append(v["salario"])
+        if setor_sal:
+            maior_sal = max(sum(s)/len(s) for s in setor_sal.values())
+            for setor, sals in sorted(setor_sal.items(), key=lambda x: -sum(x[1])/len(x[1])):
+                media = sum(sals) / len(sals)
                 media_fmt = f"R$ {media:,.0f}".replace(",", ".")
-                pct = media / maior * 100
+                pct_s = media / maior_sal * 100
                 st.markdown(f"""
-                <div style="margin-bottom:8px">
-                  <div style="display:flex;justify-content:space-between;margin-bottom:2px">
-                    <span style="font-size:13px">{setor}</span>
-                    <span style="font-size:13px;font-weight:600">{media_fmt}</span>
-                  </div>
-                  <div style="background:#e0e0e0;border-radius:6px;height:18px">
-                    <div style="background:#E65100;width:{pct:.0f}%;height:18px;border-radius:6px"></div>
-                  </div>
-                </div>
-                """, unsafe_allow_html=True)
+                <div class="bar-row">
+                  <div class="bar-label"><span>{setor}</span><span style="font-weight:700">{media_fmt}</span></div>
+                  <div class="bar-bg"><div class="bar-fill" style="background:#E65100;width:{pct_s:.1f}%"></div></div>
+                </div>""", unsafe_allow_html=True)
+        else:
+            st.caption("Sem dados de salário.")
+        st.markdown('</div>', unsafe_allow_html=True)
 
-    st.divider()
+    # ── Tabela: vagas abertas há mais tempo ───────────────────────────────────
+    vagas_com_dias = [(v, _dias(v)) for v in abertas if _dias(v) > 0]
+    vagas_com_dias.sort(key=lambda x: -x[1])
 
-    # Status aberta vs encerrada — mini visual
-    st.markdown("### 📉 Status das Vagas")
-    col_s1, col_s2, col_s3 = st.columns([2, 2, 3])
-    with col_s1:
-        pct_ab = len(abertas) / len(vagas) * 100 if vagas else 0
+    if vagas_com_dias:
+        st.markdown('<div class="bloco">', unsafe_allow_html=True)
+        st.markdown('<div class="bloco-title">⚠️ Vagas abertas há mais tempo</div>', unsafe_allow_html=True)
+        rows = ""
+        for v, dias in vagas_com_dias[:15]:
+            cls = "linha-atrasada" if dias >= 30 else ""
+            cor_dias = "#B71C1C" if dias >= 30 else "#E65100" if dias >= 15 else "#555"
+            rec = v.get("recrutador")
+            rec_nome = rec["nome"] if rec else "—"
+            badge_status = f'<span class="dash-badge dash-aberta">Aberta</span>'
+            rows += f"""<tr class="{cls}">
+              <td><b>{v['titulo']}</b></td>
+              <td>{v['empresa']['nome']}</td>
+              <td>{MODALIDADE_LABEL.get(v['modalidade'], v['modalidade'])}</td>
+              <td style="color:{cor_dias};font-weight:700">{dias} dias</td>
+              <td>{rec_nome}</td>
+              <td>{badge_status}</td>
+            </tr>"""
         st.markdown(f"""
-        <div style="background:#e8f5e9;border-radius:12px;padding:16px;text-align:center">
-          <div style="font-size:36px;font-weight:700;color:#2E7D32">{pct_ab:.0f}%</div>
-          <div style="color:#555">das vagas estão abertas</div>
-          <div style="font-size:12px;color:#888">{len(abertas)} de {len(vagas)}</div>
-        </div>
+        <div class="tabela-wrap"><table>
+          <thead><tr>
+            <th>Vaga</th><th>Empresa</th><th>Modalidade</th>
+            <th>Tempo aberta</th><th>Recrutador</th><th>Status</th>
+          </tr></thead>
+          <tbody>{rows}</tbody>
+        </table></div>
         """, unsafe_allow_html=True)
-    with col_s2:
-        pct_enc = len(encerradas) / len(vagas) * 100 if vagas else 0
-        st.markdown(f"""
-        <div style="background:#fce4ec;border-radius:12px;padding:16px;text-align:center">
-          <div style="font-size:36px;font-weight:700;color:#B71C1C">{pct_enc:.0f}%</div>
-          <div style="color:#555">das vagas estão encerradas</div>
-          <div style="font-size:12px;color:#888">{len(encerradas)} de {len(vagas)}</div>
-        </div>
-        """, unsafe_allow_html=True)
-    with col_s3:
-        pct_pcd = len(pcd) / len(vagas) * 100 if vagas else 0
-        st.markdown(f"""
-        <div style="background:#f3e5f5;border-radius:12px;padding:16px;text-align:center">
-          <div style="font-size:36px;font-weight:700;color:#6A1B9A">{pct_pcd:.0f}%</div>
-          <div style="color:#555">das vagas são PcD</div>
-          <div style="font-size:12px;color:#888">{len(pcd)} de {len(vagas)} vagas inclusivas</div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    st.divider()
-
-    # Alertas de vagas paradas
-    st.markdown("### ⚠️ Vagas Abertas Há Muito Tempo")
-    hoje = date.today()
-    vagas_antigas = []
-    for v in abertas:
-        ref = v.get("data_abertura") or v.get("data_publicacao")
-        if ref:
-            dias = (hoje - date.fromisoformat(ref)).days
-            vagas_antigas.append((v, dias))
-
-    vagas_antigas.sort(key=lambda x: -x[1])
-    alertas = [(v, d) for v, d in vagas_antigas if d >= 60][:10]
-
-    if alertas:
-        for vaga, dias in alertas:
-            if dias >= 90:
-                cor, bg, icone = "#B71C1C", "#fce4ec", "🔴"
-            elif dias >= 60:
-                cor, bg, icone = "#E65100", "#fff3e0", "🟠"
-            else:
-                cor, bg, icone = "#F9A825", "#fffde7", "🟡"
-            st.markdown(f"""
-            <div style="background:{bg};border-left:4px solid {cor};border-radius:6px;padding:10px 14px;margin-bottom:8px">
-              {icone} <strong>{vaga['titulo']}</strong> — {vaga['empresa']['nome']}
-              <span style="float:right;color:{cor};font-weight:600">{dias} dias aberta</span>
-            </div>
-            """, unsafe_allow_html=True)
-    else:
-        st.success("✅ Nenhuma vaga aberta há mais de 30 dias.")
+        st.markdown('</div>', unsafe_allow_html=True)
 
 
 # ── Empresas (Admin) ──────────────────────────────────────────────────────────
