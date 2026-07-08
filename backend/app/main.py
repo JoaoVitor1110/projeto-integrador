@@ -37,164 +37,186 @@ def _seed_dados():
         if db.query(models.Empresa).count() > 0:
             return  # já tem dados
 
+        from datetime import date as _date
+
+        # ── Recrutadoras ──────────────────────────────────────────────────────
+        RECRUTADORAS = [
+            ("Juliana", "juliana@agencia.com"),
+            ("Manu",    "manu@agencia.com"),
+            ("Mel",     "mel@agencia.com"),
+            ("Sara",    "sara@agencia.com"),
+            ("Silvia",  "silvia@agencia.com"),
+            ("Thais",   "thais@agencia.com"),
+            ("Ully",    "ully@agencia.com"),
+            ("Yasmin",  "yasmin@agencia.com"),
+            ("Yumi",    "yumi@agencia.com"),
+        ]
+        rec_map = {}
+        for nome_r, email_r in RECRUTADORAS:
+            u = db.query(models.Usuario).filter(models.Usuario.email == email_r).first()
+            if not u:
+                u = models.Usuario(
+                    nome=nome_r, email=email_r,
+                    senha_hash=hash_senha("Senha@123"),
+                    perfil=models.PerfilEnum.recrutador,
+                )
+                db.add(u)
+                db.flush()
+            rec_map[nome_r.upper()] = u.id
+
+        # ── Empresas ──────────────────────────────────────────────────────────
         EMPRESAS = [
-            ("Google Brasil",          "06.990.590/0001-23", "Tecnologia",               "São Paulo", "SP"),
-            ("Nubank",                 "18.236.120/0001-58", "Fintech",                   "São Paulo", "SP"),
-            ("Magazine Luiza",         "47.960.950/0001-21", "Varejo",                    "Franca",    "SP"),
-            ("Ambev",                  "07.526.557/0001-00", "Bebidas / FMCG",            "São Paulo", "SP"),
-            ("Hospital Albert Einstein","60.765.823/0001-30","Saúde",                     "São Paulo", "SP"),
-            ("Itaú Unibanco",          "60.872.504/0001-23", "Financeiro",                "São Paulo", "SP"),
-            ("iFood",                  "14.380.200/0001-21", "Tecnologia / Delivery",     "Osasco",    "SP"),
-            ("Embraer",                "07.689.002/0001-89", "Aeronáutica",               "São José dos Campos", "SP"),
-            ("Natura &Co",             "71.673.990/0001-77", "Cosméticos",                "São Paulo", "SP"),
-            ("XP Inc.",                "02.332.886/0001-04", "Financeiro / Investimentos","São Paulo", "SP"),
+            "ACRIMET", "ALFA ALIMENTOS", "ALFA ALIMENTOS (CIBELE)", "ART TÉCNICA",
+            "ASTECH BOMBAS", "AURA HOME", "AUTOMETAL", "AUTOMETAL / SAARGUMI",
+            "AXXIS - ITUPEVA", "BRASA BAR", "COMPONENT DIADEMA", "CSI CARGO",
+            "FORTE FIXADORES", "G2B PRODUÇÕES", "GALVANOPLASTIA DIADEMA",
+            "GRUPO LUKSCOLOR", "IAM", "IBAB RUBBER", "INYLBRA", "ITEB",
+            "MARTE BALANÇAS", "MIKROVAL", "OMEGA -MEGA LIGHT DIADEMA",
+            "ORUOM - SBCAMPO", "PAPEIS SAFRA", "PLASFIL", "PRODUFLEX",
+            "RASSINI", "REAL CESTAS", "RUFATO", "SEFAR", "SER GLASS",
+            "SPRAYING", "TECNOBRASIL", "TECNOCON", "TUBOS IPIRANGA",
+            "TW ESPUMA", "TW ESPUMAS", "VIVA COR", "VK MOLAS",
+            "WORLD LABEL", "ZEPPINI", "ZHS IND e COMERCIO",
         ]
         emp_map = {}
-        for nome, cnpj, setor, cidade, estado in EMPRESAS:
-            e = models.Empresa(nome=nome, cnpj=cnpj, setor=setor, cidade=cidade, estado=estado)
+        for nome_e in EMPRESAS:
+            e = models.Empresa(nome=nome_e, cnpj="", setor="Indústria", cidade="São Paulo", estado="SP")
             db.add(e)
             db.flush()
-            emp_map[nome] = e.id
+            emp_map[nome_e] = e.id
 
-        from datetime import date as _date
+        # ── Vagas (backlog real TGA) ───────────────────────────────────────────
+        # (titulo, empresa, modalidade, status, qtd, data_abertura, recrutador, descricao)
         VAGAS = [
-            ("Engenheiro de Software Sênior", "Google Brasil",   "remoto",     "PJ",        22000, False, "aberta",   "2026-01-10",
-             ["Vale Refeição","Plano de Saúde","Stock Options","Home Office"],
-             [("Python","obrigatorio"),("Cloud GCP","obrigatorio"),("Kubernetes","desejavel")]),
-            ("Data Scientist",                "Google Brasil",   "hibrido",    "CLT",       18000, False, "aberta",   "2026-02-05",
-             ["Vale Refeição","Plano de Saúde","Gympass"],
-             [("Machine Learning","obrigatorio"),("Python","obrigatorio"),("BigQuery","desejavel")]),
-            ("UX Designer",                   "Google Brasil",   "remoto",     "CLT",       12000, False, "aberta",   "2026-03-01",
-             ["Vale Refeição","Plano de Saúde"],
-             [("Figma","obrigatorio"),("Pesquisa de Usuário","obrigatorio")]),
-            ("Engenheiro de Backend",         "Nubank",          "remoto",     "CLT",       20000, False, "aberta",   "2025-11-15",
-             ["Vale Refeição","Plano de Saúde","Stock Options"],
-             [("Clojure","obrigatorio"),("Kafka","desejavel"),("PostgreSQL","obrigatorio")]),
-            ("Analista de Risco de Crédito",  "Nubank",          "hibrido",    "CLT",        9000, False, "aberta",   "2026-01-20",
-             ["Vale Refeição","Plano de Saúde","PLR"],
-             [("SQL","obrigatorio"),("Estatística","obrigatorio"),("Python","desejavel")]),
-            ("Product Manager",               "Nubank",          "remoto",     "CLT",       25000, False, "encerrada","2025-10-01",
-             ["Vale Refeição","Plano de Saúde","Stock Options"],
-             [("Gestão de Produto","obrigatorio"),("Inglês Fluente","obrigatorio")]),
-            ("Desenvolvedor Full Stack",       "Magazine Luiza",  "presencial", "CLT",       11000, False, "aberta",   "2026-02-15",
-             ["Vale Refeição","Vale Transporte","Plano de Saúde"],
-             [("React","obrigatorio"),("Node.js","obrigatorio"),("MySQL","desejavel")]),
-            ("Analista de E-commerce",         "Magazine Luiza",  "presencial", "CLT",        6500, False, "aberta",   "2026-03-10",
-             ["Vale Refeição","Vale Transporte"],
-             [("Google Analytics","obrigatorio"),("SEO","obrigatorio"),("Excel Avançado","desejavel")]),
-            ("Assistente Logístico PcD",       "Magazine Luiza",  "presencial", "CLT",        2800, True,  "aberta",   "2026-03-20",
-             ["Vale Refeição","Vale Transporte","Plano de Saúde"],
-             [("Ensino Médio Completo","obrigatorio")]),
-            ("Analista de Marketing Digital",  "Ambev",           "hibrido",    "CLT",        8000, False, "aberta",   "2026-01-05",
-             ["Vale Refeição","PLR","Plano de Saúde","Gympass"],
-             [("Google Ads","obrigatorio"),("Meta Ads","obrigatorio"),("Inglês Intermediário","desejavel")]),
-            ("Gerente de Trade Marketing",     "Ambev",           "presencial", "CLT",       15000, False, "aberta",   "2025-12-01",
-             ["Carro Empresa","Plano de Saúde","PLR"],
-             [("Gestão de Equipes","obrigatorio"),("Excel Avançado","obrigatorio"),("MBA","desejavel")]),
-            ("Enfermeiro(a) UTI",              "Hospital Albert Einstein","presencial","CLT",  7500, False, "aberta",   "2026-02-01",
-             ["Plano de Saúde","Vale Refeição","Plantão Noturno Premium"],
-             [("COREN Ativo","obrigatorio"),("Experiência em UTI","obrigatorio")]),
-            ("Analista de TI Hospitalar",      "Hospital Albert Einstein","presencial","CLT",  9000, False, "aberta",   "2026-03-05",
-             ["Plano de Saúde","Vale Refeição","Vale Transporte"],
-             [("Suporte a Sistemas Hospitalares","obrigatorio"),("ITIL","desejavel")]),
-            ("Auxiliar Administrativo PcD",    "Hospital Albert Einstein","presencial","CLT",  2500, True,  "aberta",   "2026-03-15",
-             ["Plano de Saúde","Vale Refeição","Vale Transporte"],
-             [("Ensino Médio Completo","obrigatorio"),("Pacote Office","obrigatorio")]),
-            ("Analista de Dados Financeiros",  "Itaú Unibanco",   "hibrido",    "CLT",       13000, False, "aberta",   "2026-01-15",
-             ["Vale Refeição","Plano de Saúde","PLR","Previdência Privada"],
-             [("SQL","obrigatorio"),("Power BI","obrigatorio"),("Python","desejavel")]),
-            ("Especialista em Crédito",        "Itaú Unibanco",   "presencial", "CLT",       11000, False, "aberta",   "2026-02-20",
-             ["Vale Refeição","Plano de Saúde","PLR"],
-             [("Análise de Crédito","obrigatorio"),("Excel Avançado","obrigatorio")]),
-            ("Desenvolvedor Mobile",           "iFood",           "remoto",     "CLT",       16000, False, "aberta",   "2026-01-25",
-             ["Vale Refeição","Plano de Saúde","Stock Options"],
-             [("Flutter","obrigatorio"),("Kotlin","desejavel"),("Swift","desejavel")]),
-            ("Analista de Operações",          "iFood",           "hibrido",    "CLT",        7000, False, "encerrada","2025-09-01",
-             ["Vale Refeição","Plano de Saúde"],
-             [("Logística","obrigatorio"),("Excel Avançado","obrigatorio")]),
-            ("Engenheiro Aeronáutico Sênior",  "Embraer",         "presencial", "CLT",       18000, False, "aberta",   "2026-02-10",
-             ["Plano de Saúde","Vale Refeição","PLR","Previdência Privada"],
-             [("Engenharia Aeronáutica","obrigatorio"),("Inglês Fluente","obrigatorio"),("CATIA","desejavel")]),
-            ("Técnico de Manutenção",          "Embraer",         "presencial", "CLT",        6500, False, "aberta",   "2026-03-01",
-             ["Plano de Saúde","Vale Refeição","Vale Transporte"],
-             [("Eletromecânica","obrigatorio"),("NR-10","obrigatorio")]),
-            ("Analista de Sustentabilidade",   "Natura &Co",      "hibrido",    "CLT",        8500, False, "aberta",   "2026-01-10",
-             ["Vale Refeição","Plano de Saúde","Gympass"],
-             [("Meio Ambiente","obrigatorio"),("Inglês Intermediário","desejavel")]),
-            ("Analista de Investimentos",      "XP Inc.",         "presencial", "CLT",       15000, False, "aberta",   "2026-02-01",
-             ["Vale Refeição","Plano de Saúde","PLR","Bônus"],
-             [("CPA-20","obrigatorio"),("Excel Avançado","obrigatorio"),("MBA","desejavel")]),
-            ("Assessor de Investimentos PcD",  "XP Inc.",         "hibrido",    "CLT",        9000, True,  "aberta",   "2026-03-10",
-             ["Vale Refeição","Plano de Saúde","PLR"],
-             [("CPA-10","obrigatorio"),("Inglês Básico","desejavel")]),
+            ("Ajudante De Produção", "ZEPPINI", "presencial", "aberta", 4, "2026-04-07", "YASMIN", ""),
+            ("Manutencista Predial (Tipo Pedreiro)", "RUFATO", "presencial", "aberta", 1, "2026-05-11", "MEL", ""),
+            ("Auxiliar De Almoxarifado", "RUFATO", "presencial", "aberta", 70, "2026-06-24", "MEL", ""),
+            ("Vendedora Interna", "PAPEIS SAFRA", "presencial", "aberta", 10, "2026-04-13", "SARA", "VAGA DIFÍCIL DE FECHAR"),
+            ("Operador Multifuncional", "ZHS IND e COMERCIO", "presencial", "aberta", 1, "2026-05-08", "YUMI", ""),
+            ("Vendedor Interno", "MARTE BALANÇAS", "presencial", "aberta", 2, "2026-04-08", "MANU", ""),
+            ("Auxiliar De Produção", "VK MOLAS", "presencial", "aberta", 2, "2026-04-29", "SARA", "CLIENTE NÃO RESPONDE"),
+            ("Auxiliar De Enfermagem Do Trabalho", "RASSINI", "presencial", "aberta", 1, "2026-04-07", "SARA", "ENVIAR MAIS CANDIDATOS"),
+            ("Eletricista De Manutenção", "AUTOMETAL", "presencial", "aberta", 1, "2026-06-22", "YASMIN", ""),
+            ("Auxiliar De Produção", "AUTOMETAL", "presencial", "aberta", 10, "2026-06-29", "YASMIN", ""),
+            ("Ajudante Geral", "GRUPO LUKSCOLOR", "presencial", "aberta", 10, "2026-07-07", "YASMIN", "PRAZO 17/07"),
+            ("Ajudante Geral Pcd", "GRUPO LUKSCOLOR", "presencial", "aberta", 1, "2026-05-11", "YUMI", "PRAZO 16/07"),
+            ("Auxiliar De Laboratório", "GRUPO LUKSCOLOR", "presencial", "aberta", 1, "2026-06-11", "JULIANA", ""),
+            ("Auxiliar De Controle Qualidade", "GRUPO LUKSCOLOR", "presencial", "aberta", 2, "2026-05-11", "JULIANA", ""),
+            ("Separador C", "GRUPO LUKSCOLOR", "presencial", "aberta", 1, "2026-06-16", "YUMI", "PRAZO 17/07"),
+            ("Consultor De Vendas", "REAL CESTAS", "presencial", "aberta", 2, "2026-05-12", "YUMI", ""),
+            ("Ajudante Geral", "PAPEIS SAFRA", "presencial", "aberta", 5, "2026-04-13", "YASMIN", "VAGA DIFÍCIL DE FECHAR"),
+            ("Almoxarifado De Ferramentas", "SPRAYING", "presencial", "aberta", 1, "2026-04-13", "YASMIN", ""),
+            ("Auxiliar De Limpeza Masculino", "ALFA ALIMENTOS (CIBELE)", "presencial", "aberta", 2, "2026-06-08", "SILVIA", ""),
+            ("Operador De Empilhadeira", "CSI CARGO", "presencial", "aberta", 1, "2026-05-05", "YUMI", "REABRIR A VAGA"),
+            ("Auxiliar De Serviços Gerais", "CSI CARGO", "presencial", "aberta", 1, "2026-05-11", "YUMI", ""),
+            ("Auxiliar Operacional", "CSI CARGO", "presencial", "aberta", 20, "2026-05-27", "YUMI", "FERNANDA INFORMOU 20 VAGAS"),
+            ("Operador De Máquina Multifuncional", "ORUOM - SBCAMPO", "presencial", "aberta", 1, "2026-05-11", "YUMI", ""),
+            ("Especialista Em Pintura Líquida", "AUTOMETAL / SAARGUMI", "presencial", "aberta", 1, "2026-04-08", "ULLY", ""),
+            ("Mecânico De Manutenção", "PLASFIL", "presencial", "aberta", 1, "2026-04-13", "MANU", ""),
+            ("Laminador", "PLASFIL", "presencial", "aberta", 1, "2026-04-13", "MANU", ""),
+            ("Auxiliar De Produção", "PLASFIL", "presencial", "aberta", 4, "2026-04-24", "MANU", "CANDIDATOS ENVIADOS SEM RETORNO"),
+            ("Rebobinador", "PLASFIL", "presencial", "aberta", 2, "2026-04-15", "MANU", ""),
+            ("Televendas", "ACRIMET", "presencial", "aberta", 1, "2026-04-13", "MEL", "VAGAS TRAVADAS"),
+            ("Motorista", "ACRIMET", "presencial", "aberta", 1, "2026-04-13", "MEL", "VAGAS TRAVADAS"),
+            ("Vendedor Interno", "ACRIMET", "presencial", "aberta", 1, "2026-04-13", "MEL", "VAGAS TRAVADAS"),
+            ("Engenheiro De Materiais Jr", "AUTOMETAL / SAARGUMI", "presencial", "aberta", 1, "2026-04-23", "ULLY", ""),
+            ("Auxiliar De Laboratório", "VIVA COR", "presencial", "aberta", 1, "2026-04-23", "MANU", "CLIENTE NÃO RESPONDE"),
+            ("Ajudante De Produção", "INYLBRA", "presencial", "aberta", 15, "2026-05-04", "SARA", ""),
+            ("Inspetor Da Qualidade", "INYLBRA", "presencial", "aberta", 1, "2026-04-24", "SARA", "CANDIDATO NÃO COMPARECEU"),
+            ("Ajudante De Produção (Masc) T= M E T", "SPRAYING", "presencial", "aberta", 2, "2026-05-04", "MANU", ""),
+            ("Garçon", "BRASA BAR", "presencial", "encerrada", 1, "2026-04-13", "MANU", ""),
+            ("Cozinheiro", "BRASA BAR", "presencial", "encerrada", 1, "2026-04-13", "MANU", ""),
+            ("Auxiliar De Almoxarifado", "TECNOCON", "presencial", "aberta", 1, "2026-05-08", "MEL", ""),
+            ("Ajudante De Produção", "IBAB RUBBER", "presencial", "aberta", 2, "2026-05-08", "YUMI", ""),
+            ("Auxiliar De Produção", "ITEB", "presencial", "aberta", 4, "2026-05-07", "", ""),
+            ("Auxiliar De Produção", "TW ESPUMA", "presencial", "aberta", 10, "2026-05-25", "", "CLIENTE VAI AVISAR QUANDO FOR CONTRATAR"),
+            ("Auxiliar De Almoxarifado", "AUTOMETAL", "presencial", "aberta", 1, "2026-05-13", "YASMIN", ""),
+            ("Ferramenteiro Moldes", "AUTOMETAL", "presencial", "aberta", 1, "2026-06-24", "YASMIN", ""),
+            ("Abastecedor De Produção", "AUTOMETAL", "presencial", "aberta", 10, "2026-05-07", "YASMIN", ""),
+            ("Fresador Ferramenteiro", "FORTE FIXADORES", "presencial", "aberta", 1, "2026-06-29", "YASMIN", ""),
+            ("Preparador E Op Torno CNC", "FORTE FIXADORES", "presencial", "aberta", 2, "2026-06-29", "YASMIN", ""),
+            ("Operador De Prensa De Fricção", "FORTE FIXADORES", "presencial", "aberta", 1, "2026-06-29", "YASMIN", ""),
+            ("Mecânico Manutenção De Máquinas", "SPRAYING", "presencial", "aberta", 1, "2026-06-10", "SARA", ""),
+            ("Soldador", "SPRAYING", "presencial", "aberta", 1, "2026-06-24", "ULLY", ""),
+            ("Projetista Com Conhecimento Em Mecatrônica", "SPRAYING", "presencial", "aberta", 1, "2026-05-03", "YASMIN", ""),
+            ("Auxiliar De Produção", "TECNOBRASIL", "presencial", "aberta", 3, "2026-05-11", "MANU", ""),
+            ("Analista De Recursos Humanos", "RASSINI", "presencial", "aberta", 1, "2026-06-26", "SARA", ""),
+            ("Auxiliar De Almoxarifado", "RASSINI", "presencial", "aberta", 1, "2026-05-08", "SARA", "ENVIAR MAIS CANDIDATOS"),
+            ("Auxiliar De Limpeza Fem", "ALFA ALIMENTOS (CIBELE)", "presencial", "aberta", 2, "2026-06-08", "SILVIA", ""),
+            ("Auxiliar De Produção", "ALFA ALIMENTOS", "presencial", "aberta", 10, "2026-06-18", "SILVIA", ""),
+            ("Auxiliar De Almoxarifado", "OMEGA -MEGA LIGHT DIADEMA", "presencial", "aberta", 3, "2026-06-19", "YASMIN", ""),
+            ("Auxiliar De Montagem - Fem", "OMEGA -MEGA LIGHT DIADEMA", "presencial", "aberta", 2, "2026-06-19", "YASMIN", ""),
+            ("Auxiliar De Produção (Masc/Fem)", "AXXIS - ITUPEVA", "presencial", "aberta", 1, "2026-05-25", "YASMIN", ""),
+            ("Ajudante De Expedição", "ZEPPINI", "presencial", "aberta", 2, "2026-06-17", "YASMIN", ""),
+            ("Ajudante De Produção (Coquilha)", "ZEPPINI", "presencial", "aberta", 1, "2026-04-07", "YASMIN", ""),
+            ("Aux Serviços Gerais (Limpeza)", "PRODUFLEX", "presencial", "aberta", 3, "2026-04-28", "", ""),
+            ("Porteiro Com CNH B", "PRODUFLEX", "presencial", "aberta", 1, "2026-04-28", "SARA", "EMPRESA NÃO DEU RETORNO"),
+            ("Operador De Caixa", "BRASA BAR", "presencial", "encerrada", 1, "2026-04-13", "MANU", ""),
+            ("Assistente Adm Fiscal", "AXXIS - ITUPEVA", "presencial", "aberta", 1, "2026-04-07", "MEL", ""),
+            ("Eletricista", "AXXIS - ITUPEVA", "presencial", "aberta", 1, "2026-05-18", "YASMIN", ""),
+            ("Mecânico De Manutenção", "AXXIS - ITUPEVA", "presencial", "aberta", 1, "2026-05-18", "YASMIN", ""),
+            ("Oficial Mecânico De Manutenção", "AXXIS - ITUPEVA", "presencial", "aberta", 1, "2026-05-18", "YASMIN", ""),
+            ("Mecânico Hidráulico", "INYLBRA", "presencial", "aberta", 1, "2026-04-24", "SARA", ""),
+            ("Programador De Robô", "INYLBRA", "presencial", "aberta", 1, "2026-05-11", "SARA", ""),
+            ("Assistente De Recursos Humanos", "RUFATO", "presencial", "aberta", 1, "2026-07-07", "MEL", ""),
+            ("Operador De Empilhadeira", "RUFATO", "presencial", "aberta", 4, "2026-05-26", "MEL", "ENVIADOS PARA VALIDAÇÃO INTERNA DA RUFATO EM 29/05"),
+            ("Analista De Engenharia", "INYLBRA", "presencial", "aberta", 1, "2026-05-26", "ULLY", "CANDIDATO 2ª ETAPA NA EMPRESA"),
+            ("Operador De Máquina", "ZHS IND e COMERCIO", "presencial", "aberta", 1, "2026-05-22", "YUMI", ""),
+            ("Auxiliar De Galvanoplastia", "GALVANOPLASTIA DIADEMA", "presencial", "aberta", 3, "2026-05-27", "SARA", ""),
+            ("Auxiliar De Manutenção Predial", "SER GLASS", "presencial", "aberta", 1, "2026-06-30", "SARA", ""),
+            ("Auxiliar De Produção", "SER GLASS", "presencial", "aberta", 10, "2026-06-01", "MEL", ""),
+            ("Auxiliar De Manufatura", "SEFAR", "presencial", "aberta", 4, "2026-06-18", "SILVIA", "4 VAGAS"),
+            ("Costureira", "SEFAR", "presencial", "aberta", 1, "2026-06-01", "SILVIA", "REPOSIÇÃO DE 1 FUNCIONÁRIA"),
+            ("Suporte De Operações", "AURA HOME", "presencial", "aberta", 1, "2026-06-02", "THAIS", "2 ETAPA"),
+            ("Analista De Qualidade", "TW ESPUMAS", "presencial", "aberta", 1, "2026-06-12", "JULIANA", ""),
+            ("Assistente Administrativo", "AXXIS - ITUPEVA", "presencial", "aberta", 1, "2026-06-15", "YASMIN", ""),
+            ("Técnico Em Desenvolvimento De Produtos", "ART TÉCNICA", "presencial", "aberta", 1, "2026-06-18", "JULIANA", ""),
+            ("Selecionadora De Peças", "ART TÉCNICA", "presencial", "aberta", 1, "2026-06-18", "JULIANA", ""),
+            ("Auxiliar De Produção", "ART TÉCNICA", "presencial", "aberta", 3, "2026-06-18", "JULIANA", ""),
+            ("Assistente De PCP", "ART TÉCNICA", "presencial", "aberta", 1, "2026-06-18", "JULIANA", ""),
+            ("Vendedor Interno", "ART TÉCNICA", "presencial", "aberta", 1, "2026-06-18", "JULIANA", ""),
+            ("Técnico De Segurança Do Trabalho", "COMPONENT DIADEMA", "presencial", "aberta", 1, "2026-06-24", "YASMIN", ""),
+            ("Auxiliar De Produção - Setor Montagem", "IAM", "presencial", "aberta", 2, "2026-06-26", "YASMIN", ""),
+            ("Inspetor De Qualidade – Setor Trefila", "TUBOS IPIRANGA", "presencial", "aberta", 1, "2026-06-23", "SARA", ""),
+            ("Operador Máquina I Ou Ajudante – Ponte Rolante", "TUBOS IPIRANGA", "presencial", "aberta", 3, "2026-06-23", "SARA", ""),
+            ("Soldador I – Setor Manutenção Trefila", "TUBOS IPIRANGA", "presencial", "aberta", 1, "2026-06-23", "SARA", ""),
+            ("Mecânico De Manutenção II – Manutenção", "TUBOS IPIRANGA", "presencial", "aberta", 1, "2026-06-23", "SARA", ""),
+            ("Auxiliar Administrativo PCP", "TUBOS IPIRANGA", "presencial", "aberta", 1, "2026-06-23", "SARA", "Sem retorno"),
+            ("Operador De Máquina I – Usinagem", "TUBOS IPIRANGA", "presencial", "aberta", 3, "2026-06-23", "SARA", ""),
+            ("Analista De Custos (Pleno Ou Sênior)", "PRODUFLEX", "presencial", "aberta", 1, "2026-06-29", "JULIANA", ""),
+            ("Laminador", "FORTE FIXADORES", "presencial", "aberta", 1, "2026-06-29", "YUMI", ""),
+            ("Assistente/Analista Adm Jr", "FORTE FIXADORES", "presencial", "aberta", 1, "2026-06-29", "YUMI", ""),
+            ("Auxiliar De Compras", "FORTE FIXADORES", "presencial", "aberta", 1, "2026-06-29", "YUMI", ""),
+            ("Caldeireiro Industrial", "FORTE FIXADORES", "presencial", "aberta", 1, "2026-06-29", "YUMI", ""),
+            ("Técnico Eletrônico - Pós Vendas", "RASSINI", "presencial", "aberta", 1, "2026-06-25", "SARA", ""),
+            ("Auxiliar De Almoxarifado", "WORLD LABEL", "presencial", "aberta", 1, "2026-07-01", "SILVIA", ""),
+            ("Auxiliar De Acabamento", "WORLD LABEL", "presencial", "aberta", 1, "2026-07-01", "SILVIA", ""),
+            ("Rebobinador E Revisor", "WORLD LABEL", "presencial", "aberta", 1, "2026-07-01", "SILVIA", ""),
+            ("Troquelador Revisor", "WORLD LABEL", "presencial", "aberta", 1, "2026-07-01", "SILVIA", ""),
+            ("Assistente De Roteiro", "GRUPO LUKSCOLOR", "presencial", "aberta", 1, "2026-07-01", "YASMIN", ""),
+            ("Pintor", "GRUPO LUKSCOLOR", "presencial", "aberta", 1, "2026-07-01", "YASMIN", ""),
+            ("Ajudante Geral PcD Almoxarifado", "GRUPO LUKSCOLOR", "presencial", "aberta", 1, "2026-07-01", "YASMIN", ""),
+            ("Assistente Adm", "ASTECH BOMBAS", "presencial", "aberta", 1, "2026-07-02", "MANU", ""),
+            ("Assistente Adm (Nazaré Pta)", "MIKROVAL", "presencial", "aberta", 1, "2026-07-02", "MANU", ""),
+            ("Ajudante Geral (SBC)", "MIKROVAL", "presencial", "aberta", 3, "2026-07-02", "MANU", ""),
+            ("Encarregado De Expedição", "G2B PRODUÇÕES", "presencial", "aberta", 1, "2026-07-03", "YUMI", ""),
         ]
 
-        ben_cache = {}
-        for titulo, emp_nome, modal, contrato, sal, pcd, status, data_ab, bens, reqs in VAGAS:
+        for titulo_v, emp_nome, mod_v, status_v, qtd_v, data_v, rec_nome, desc_v in VAGAS:
             eid = emp_map.get(emp_nome)
             if not eid:
                 continue
+            rid = rec_map.get(rec_nome.upper()) if rec_nome else None
             vaga = models.Vaga(
-                titulo=titulo, empresa_id=eid, modalidade=modal,
-                tipo_contrato=contrato, salario=sal, vaga_pcd=pcd,
-                status=status, data_abertura=_date.fromisoformat(data_ab),
-                data_publicacao=_date.fromisoformat(data_ab),
-                local="São Paulo, SP", publico_alvo="ambos", quantidade_vagas=1,
+                titulo=titulo_v, empresa_id=eid, modalidade=mod_v,
+                tipo_contrato="CLT", status=status_v,
+                quantidade_vagas=qtd_v, recrutador_id=rid,
+                local="São Paulo, SP", publico_alvo="ambos",
+                descricao=desc_v or None,
+                data_abertura=_date.fromisoformat(data_v),
+                data_publicacao=_date.fromisoformat(data_v),
             )
             db.add(vaga)
-            db.flush()
-            for nome_b in bens:
-                if nome_b not in ben_cache:
-                    b = models.Beneficio(nome=nome_b)
-                    db.add(b); db.flush()
-                    ben_cache[nome_b] = b
-                vaga.beneficios.append(ben_cache[nome_b])
-            for desc_r, nivel_r in reqs:
-                r = models.Requisito(descricao=desc_r, nivel=nivel_r)
-                db.add(r); db.flush()
-                vaga.requisitos.append(r)
-
-        CANDIDATOS = [
-            ("Ana Lima","ana.lima@email.com","11912340001","São Paulo","SP"),
-            ("Carlos Souza","carlos.souza@email.com","11912340002","Campinas","SP"),
-            ("Beatriz Santos","beatriz.santos@email.com","11912340003","Rio de Janeiro","RJ"),
-            ("Lucas Ferreira","lucas.ferreira@email.com","11912340004","Belo Horizonte","MG"),
-            ("Mariana Costa","mariana.costa@email.com","11912340005","São Paulo","SP"),
-            ("Rafael Oliveira","rafael.oliveira@email.com","11912340006","Curitiba","PR"),
-            ("Juliana Pereira","juliana.pereira@email.com","11912340007","São Paulo","SP"),
-            ("Diego Almeida","diego.almeida@email.com","11912340008","Porto Alegre","RS"),
-            ("Fernanda Rocha","fernanda.rocha@email.com","11912340009","São Paulo","SP"),
-            ("Pedro Martins","pedro.martins@email.com","11912340010","Fortaleza","CE"),
-            ("Isabela Nunes","isabela.nunes@email.com","11912340011","Recife","PE"),
-            ("Thiago Barbosa","thiago.barbosa@email.com","11912340012","São Paulo","SP"),
-            ("Camila Dias","camila.dias@email.com","11912340013","São Paulo","SP"),
-            ("Bruno Carvalho","bruno.carvalho@email.com","11912340014","Salvador","BA"),
-            ("Leticia Moura","leticia.moura@email.com","11912340015","Manaus","AM"),
-            ("Rodrigo Teixeira","rodrigo.teixeira@email.com","11912340016","São Paulo","SP"),
-            ("Amanda Lopes","amanda.lopes@email.com","11912340017","São Paulo","SP"),
-            ("Felipe Nascimento","felipe.nascimento@email.com","11912340018","Brasília","DF"),
-            ("Vanessa Ribeiro","vanessa.ribeiro@email.com","11912340019","São Paulo","SP"),
-            ("Gabriel Silva","gabriel.silva@email.com","11912340020","Campinas","SP"),
-        ]
-        cand_ids = []
-        for nome, email, tel, cidade, estado in CANDIDATOS:
-            c = models.Candidato(nome=nome, email=email, telefone=tel, cidade=cidade, estado=estado)
-            db.add(c); db.flush()
-            cand_ids.append(c.id)
-
-        import random as _random
-        vagas_db = db.query(models.Vaga).all()
-        status_opts = ["em_analise", "entrevista", "aprovado", "reprovado"]
-        seen = set()
-        for vaga in vagas_db[:15]:
-            for cid in _random.sample(cand_ids, min(3, len(cand_ids))):
-                if (vaga.id, cid) in seen:
-                    continue
-                seen.add((vaga.id, cid))
-                db.add(models.Candidatura(
-                    vaga_id=vaga.id, candidato_id=cid,
-                    status=_random.choice(status_opts),
-                ))
 
         db.commit()
         print("[seed] Dados iniciais inseridos com sucesso.")
