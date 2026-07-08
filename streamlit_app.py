@@ -1101,6 +1101,85 @@ def tela_empresas():
         st.info("Nenhuma empresa cadastrada.")
         return
 
+    # ── Métricas de clientes ──────────────────────────────────────────────────
+    vagas_todas = api_get("/vagas/") or []
+    abertas_todas = [v for v in vagas_todas if v["status"] == "aberta"]
+
+    # Conta vagas abertas por empresa e detecta sem recrutador
+    emp_vagas: dict = {}
+    emp_sem_rec: set = set()
+    emp_ultima: dict = {}
+    for v in abertas_todas:
+        eid = v["empresa"]["id"]
+        emp_vagas[eid] = emp_vagas.get(eid, 0) + 1
+        if not v.get("recrutador"):
+            emp_sem_rec.add(eid)
+        data_ref = v.get("data_abertura") or v.get("data_publicacao") or ""
+        if data_ref > emp_ultima.get(eid, ""):
+            emp_ultima[eid] = data_ref
+
+    clientes_ativos = len(emp_vagas)
+    sem_retorno = len(emp_sem_rec)
+    top_emp_id = max(emp_vagas, key=emp_vagas.get) if emp_vagas else None
+    top_emp_nome = next((e["nome"] for e in empresas if e["id"] == top_emp_id), "—")
+    top_emp_qtd  = emp_vagas.get(top_emp_id, 0)
+
+    mk1, mk2, mk3 = st.columns(3)
+    with mk1:
+        st.markdown(f"""
+        <div class="kpi-card kpi-border-blue" style="text-align:center;margin-bottom:16px">
+          <div style="font-size:11px;color:#546e7a;font-weight:700;text-transform:uppercase;letter-spacing:.5px">Clientes ativos</div>
+          <div class="kpi-val-blue" style="font-size:38px;font-weight:900;line-height:1.1">{clientes_ativos}</div>
+          <div style="font-size:11px;color:#888">empresas com vagas abertas</div>
+        </div>""", unsafe_allow_html=True)
+    with mk2:
+        st.markdown(f"""
+        <div class="kpi-card kpi-border-green" style="text-align:center;margin-bottom:16px">
+          <div style="font-size:11px;color:#546e7a;font-weight:700;text-transform:uppercase;letter-spacing:.5px">Mais vagas</div>
+          <div class="kpi-val-green" style="font-size:26px;font-weight:900;line-height:1.2">{top_emp_nome}</div>
+          <div style="font-size:11px;color:#888">{top_emp_qtd} vaga(s) abertas</div>
+        </div>""", unsafe_allow_html=True)
+    with mk3:
+        st.markdown(f"""
+        <div class="kpi-card kpi-border-orange" style="text-align:center;margin-bottom:16px">
+          <div style="font-size:11px;color:#546e7a;font-weight:700;text-transform:uppercase;letter-spacing:.5px">Sem recrutador</div>
+          <div class="kpi-val-orange" style="font-size:38px;font-weight:900;line-height:1.1">{sem_retorno}</div>
+          <div style="font-size:11px;color:#888">clientes pendentes de atenção</div>
+        </div>""", unsafe_allow_html=True)
+
+    # ── Tabela de gestão ──────────────────────────────────────────────────────
+    st.markdown('<div class="bloco">', unsafe_allow_html=True)
+    st.markdown('<div class="bloco-title">Gestão de clientes</div>', unsafe_allow_html=True)
+    rows = ""
+    for emp in sorted(empresas, key=lambda e: -emp_vagas.get(e["id"], 0)):
+        qtd_v = emp_vagas.get(emp["id"], 0)
+        tem_rec = emp["id"] not in emp_sem_rec
+        status_html = (
+            '<span style="background:#e7f4ee;color:#1b5e20;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700">Ativo</span>'
+            if qtd_v > 0 and tem_rec else
+            '<span style="background:#fff3e0;color:#e65100;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700">Sem recrutador</span>'
+            if qtd_v > 0 else
+            '<span style="background:#f0f0f0;color:#666;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700">Sem vagas</span>'
+        )
+        ultima = emp_ultima.get(emp["id"], "—")
+        rows += f"""<tr>
+          <td><b>{emp['nome']}</b></td>
+          <td>{emp.get('setor','—')}</td>
+          <td style="text-align:center;font-weight:700;color:{'#1565C0' if qtd_v else '#aaa'}">{qtd_v if qtd_v else '—'}</td>
+          <td>{status_html}</td>
+          <td style="color:#546e7a;font-size:12px">{ultima}</td>
+        </tr>"""
+    st.markdown(f"""
+    <div class="tabela-wrap"><table>
+      <thead><tr>
+        <th>Empresa</th><th>Setor</th><th style="text-align:center">Vagas abertas</th>
+        <th>Status</th><th>Última vaga</th>
+      </tr></thead>
+      <tbody>{rows}</tbody>
+    </table></div>
+    """, unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
+
     st.divider()
     st.caption(f"{len(empresas)} empresa(s) cadastrada(s)")
 
