@@ -233,6 +233,36 @@ def api_delete(path):
         return False
 
 
+def api_upload(path, file_bytes, filename, content_type):
+    try:
+        r = requests.post(
+            f"{API_URL}{path}",
+            headers=_headers(),
+            files={"file": (filename, file_bytes, content_type)},
+            timeout=30,
+        )
+        r.raise_for_status()
+        return r.json()
+    except requests.exceptions.HTTPError as e:
+        detail = e.response.json().get("detail", str(e)) if e.response else str(e)
+        st.error(f"Erro: {detail}")
+        return None
+
+
+def api_download_bytes(path):
+    """Baixa um arquivo autenticado e retorna (bytes, content_type, filename)."""
+    try:
+        r = requests.get(f"{API_URL}{path}", headers=_headers(), timeout=30)
+        r.raise_for_status()
+        cd = r.headers.get("content-disposition", "")
+        filename = "curriculo"
+        if "filename=" in cd:
+            filename = cd.split("filename=")[-1].strip().strip('"')
+        return r.content, r.headers.get("content-type", "application/octet-stream"), filename
+    except Exception:
+        return None, None, None
+
+
 # ── Estado de sessão ──────────────────────────────────────────────────────────
 
 if "token" not in st.session_state:
@@ -632,6 +662,14 @@ def tela_detalhe(vaga_id):
                             st.caption(f"📞 {c['telefone']}")
                         if c.get("cidade"):
                             st.caption(f"📍 {c['cidade']}/{c.get('estado','')}")
+                        if c.get("curriculo_path"):
+                            if st.button("📄 Baixar currículo", key=f"dl_det_{cand['id']}"):
+                                data, ctype, fname = api_download_bytes(f"/candidatos/{c['id']}/curriculo")
+                                if data:
+                                    st.download_button(
+                                        "💾 Salvar", data=data, file_name=fname,
+                                        mime=ctype, key=f"save_det_{cand['id']}",
+                                    )
                     with col_status:
                         st.markdown(f"<span style='background:{cor};color:white;padding:4px 10px;border-radius:12px;font-size:12px'>{STATUS_LABEL.get(status, status)}</span>", unsafe_allow_html=True)
                         st.caption(f"📅 {cand.get('data_candidatura', '')}")
@@ -1233,6 +1271,46 @@ def tela_candidaturas():
                 st.success("Dados atualizados!")
                 st.rerun()
 
+    # ── Currículo ──────────────────────────────────────────────────────────────
+    with st.expander("📎 Currículo (PDF ou DOCX)", expanded=not candidato.get("curriculo_path")):
+        tem_curriculo = bool(candidato.get("curriculo_path"))
+        if tem_curriculo:
+            st.success("✅ Currículo enviado")
+            col_dl, col_up = st.columns([1, 2])
+            with col_dl:
+                if st.button("⬇️ Baixar currículo", key="btn_dl_curriculo"):
+                    data, ctype, fname = api_download_bytes(f"/candidatos/{candidato['id']}/curriculo")
+                    if data:
+                        st.download_button(
+                            label="💾 Salvar arquivo",
+                            data=data,
+                            file_name=fname,
+                            mime=ctype,
+                            key="dl_curriculo_save",
+                        )
+        arquivo = st.file_uploader(
+            "Substituir currículo" if tem_curriculo else "Enviar currículo",
+            type=["pdf", "docx", "doc"],
+            key="upload_curriculo",
+            label_visibility="collapsed" if tem_curriculo else "visible",
+        )
+        if arquivo:
+            MIME_MAP = {
+                "pdf": "application/pdf",
+                "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                "doc": "application/msword",
+            }
+            ext = arquivo.name.rsplit(".", 1)[-1].lower()
+            mime = MIME_MAP.get(ext, "application/octet-stream")
+            if st.button("📤 Enviar", type="primary", key="btn_enviar_curriculo"):
+                resp = api_upload(
+                    f"/candidatos/{candidato['id']}/curriculo",
+                    arquivo.read(), arquivo.name, mime,
+                )
+                if resp:
+                    st.success("Currículo enviado com sucesso!")
+                    st.rerun()
+
     st.markdown("### 📄 Minhas Candidaturas")
     candidaturas = api_get("/candidaturas/")
     minhas = [c for c in (candidaturas or []) if c.get("candidato_id") == candidato["id"]]
@@ -1423,10 +1501,23 @@ def tela_candidatos():
                 if c.get("telefone"): info.append(f"📞 {c['telefone']}")
                 if c.get("cidade"):   info.append(f"📍 {c['cidade']}/{c['estado']}")
                 st.caption("  |  ".join(info) if info else "Sem dados de contato")
+                if c.get("curriculo_path"):
+                    st.caption("📎 Currículo enviado")
             with col3:
                 if st.button("✏️", key=f"edit_cand_{c['id']}", use_container_width=True, help="Editar"):
                     st.session_state["candidato_editar"] = c["id"]
                     st.rerun()
+                if c.get("curriculo_path"):
+                    if st.button("📄", key=f"dl_cand_{c['id']}", use_container_width=True, help="Baixar currículo"):
+                        data, ctype, fname = api_download_bytes(f"/candidatos/{c['id']}/curriculo")
+                        if data:
+                            st.download_button(
+                                label="💾 Salvar",
+                                data=data,
+                                file_name=fname,
+                                mime=ctype,
+                                key=f"save_cand_{c['id']}",
+                            )
 
 
 def tela_editar_candidato(candidato_id):

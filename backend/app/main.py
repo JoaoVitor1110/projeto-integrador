@@ -9,6 +9,21 @@ from app.auth import hash_senha
 
 Base.metadata.create_all(bind=engine)
 
+
+def _migrate():
+    """Aplica colunas novas em tabelas já existentes (idempotente)."""
+    from sqlalchemy import text
+    with engine.connect() as conn:
+        try:
+            conn.execute(text("ALTER TABLE candidatos ADD COLUMN curriculo_path TEXT"))
+            conn.commit()
+        except Exception:
+            pass  # coluna já existe
+
+
+_migrate()
+
+
 def _seed_admin():
     db = SessionLocal()
     try:

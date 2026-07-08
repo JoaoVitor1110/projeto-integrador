@@ -82,6 +82,7 @@ class CandidatoCreate(BaseModel):
 class CandidatoResponse(CandidatoCreate):
     model_config = ConfigDict(from_attributes=True)
     id: int
+    curriculo_path: Optional[str] = None
 
 # Candidatura
 class CandidaturaCreate(BaseModel):

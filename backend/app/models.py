@@ -122,6 +122,7 @@ class Candidato(Base):
     cidade = Column(String)
     estado = Column(String(2))
     data_nascimento = Column(Date)
+    curriculo_path = Column(String, nullable=True)
     candidaturas = relationship("Candidatura", back_populates="candidato")
 
 class Candidatura(Base):
