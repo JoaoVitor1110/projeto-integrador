@@ -50,9 +50,6 @@ class VagaCreate(BaseModel):
     data_abertura: Optional[date] = None
     data_fechamento: Optional[date] = None
     quantidade_vagas: int = 1
-    prioridade: Optional[str] = None
-    encaminhados: int = 0
-    recrutador_responsavel: Optional[str] = None
     empresa_id: int
 
 class VagaResponse(VagaCreate):
@@ -61,9 +58,6 @@ class VagaResponse(VagaCreate):
     empresa: EmpresaResponse
     beneficios: List[BeneficioResponse] = []
     requisitos: List[RequisitoResponse] = []
-
-class VagaEncaminhadosUpdate(BaseModel):
-    encaminhados: int
 
 # Candidato
 class CandidatoCreate(BaseModel):

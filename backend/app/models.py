@@ -23,13 +23,6 @@ class ModalidadeEnum(str, enum.Enum):
     presencial = "presencial"
     remoto = "remoto"
     hibrido = "hibrido"
-    moe = "MOE"
-    mot = "MOT"
-
-class PrioridadeEnum(str, enum.Enum):
-    alta = "alta"
-    media = "media"
-    baixa = "baixa"
 
 class TipoContratoEnum(str, enum.Enum):
     CLT = "CLT"
@@ -112,9 +105,6 @@ class Vaga(Base):
     data_abertura = Column(Date, default=date.today)
     data_fechamento = Column(Date, nullable=True)
     quantidade_vagas = Column(Integer, default=1)
-    prioridade = Column(String, nullable=True)
-    encaminhados = Column(Integer, default=0)
-    recrutador_responsavel = Column(String, nullable=True)
     empresa_id = Column(Integer, ForeignKey("empresas.id"), nullable=False)
     empresa = relationship("Empresa", back_populates="vagas")
     beneficios = relationship("Beneficio", secondary=vaga_beneficio, back_populates="vagas")
