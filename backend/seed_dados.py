@@ -43,11 +43,19 @@ def main():
     token = login_admin()
     print("Login OK\n")
 
-    # 1. Criar empresas
+    # 1. Criar empresas (idempotente — reaproveita as que já existem)
     print("Criando empresas...")
     empresa_map = {}
+    existing = requests.get(f"{API}/empresas/").json()
+    for e in existing:
+        empresa_map[e["nome"]] = e["id"]
+    if empresa_map:
+        print(f"  {len(empresa_map)} empresas já existentes carregadas")
+
     cnpj_base = 10000000000000
     for i, nome in enumerate(CLIENTES):
+        if nome in empresa_map:
+            continue
         cnpj = f"{cnpj_base + i:014d}"
         cnpj_fmt = f"{cnpj[:2]}.{cnpj[2:5]}.{cnpj[5:8]}/{cnpj[8:12]}-{cnpj[12:]}"
         r = requests.post(f"{API}/empresas/", json={
