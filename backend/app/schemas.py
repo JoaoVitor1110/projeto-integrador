@@ -6,7 +6,7 @@ from app.models import ModalidadeEnum, TipoContratoEnum, PublicoAlvoEnum, Status
 # Empresa
 class EmpresaCreate(BaseModel):
     nome: str
-    cnpj: str
+    cnpj: Optional[str] = None
     setor: str
     descricao: Optional[str] = None
     cidade: str

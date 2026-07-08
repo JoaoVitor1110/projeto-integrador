@@ -1076,7 +1076,7 @@ def tela_empresas():
             col1, col2 = st.columns(2)
             with col1:
                 nome   = st.text_input("Nome da empresa *")
-                cnpj   = st.text_input("CNPJ *")
+                cnpj   = st.text_input("CNPJ")
                 setor  = st.text_input("Setor *")
             with col2:
                 cidade = st.text_input("Cidade *")
@@ -1085,7 +1085,7 @@ def tela_empresas():
             salvar = st.form_submit_button("Salvar empresa", type="primary")
 
         if salvar:
-            if not nome or not cnpj or not setor or not cidade or not estado:
+            if not nome or not setor or not cidade or not estado:
                 st.error("Preencha todos os campos obrigatórios.")
             else:
                 resp = api_post("/empresas/", json={
@@ -1109,7 +1109,7 @@ def tela_empresas():
             col1, col2, col3 = st.columns([3, 2, 1])
             with col1:
                 st.markdown(f"**{emp['nome']}**")
-                st.caption(f"CNPJ: {emp['cnpj']} | Setor: {emp['setor']}")
+                st.caption(f"{'CNPJ: ' + emp['cnpj'] + ' | ' if emp.get('cnpj') else ''}Setor: {emp['setor']}")
             with col2:
                 st.caption(f"📍 {emp['cidade']}/{emp['estado']}")
                 if emp.get("descricao"):
@@ -1453,7 +1453,7 @@ def tela_editar_empresa(empresa_id):
         col1, col2 = st.columns(2)
         with col1:
             nome   = st.text_input("Nome *", value=emp["nome"])
-            cnpj   = st.text_input("CNPJ *", value=emp["cnpj"])
+            cnpj   = st.text_input("CNPJ", value=emp.get("cnpj") or "")
             setor  = st.text_input("Setor *", value=emp["setor"])
         with col2:
             cidade = st.text_input("Cidade *", value=emp["cidade"])
@@ -1462,11 +1462,11 @@ def tela_editar_empresa(empresa_id):
         salvar = st.form_submit_button("Salvar alterações", type="primary")
 
     if salvar:
-        if not nome or not cnpj or not setor or not cidade or not estado:
+        if not nome or not setor or not cidade or not estado:
             st.error("Preencha todos os campos obrigatórios.")
         else:
             resp = api_put(f"/empresas/{empresa_id}", json={
-                "nome": nome, "cnpj": cnpj, "setor": setor,
+                "nome": nome, "cnpj": cnpj or None, "setor": setor,
                 "cidade": cidade, "estado": estado.upper(), "descricao": descricao or None,
             })
             if resp:
