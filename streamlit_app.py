@@ -56,6 +56,7 @@ st.markdown("""
     color: #083B7A !important;
     transform: translateX(3px) !important;
 }
+[data-testid="stSidebar"] button:hover *,
 [data-testid="stSidebar"] button[kind="primary"] * { color: #083B7A !important; }
 [data-testid="stSidebar"] button p { color: inherit !important; }
 
