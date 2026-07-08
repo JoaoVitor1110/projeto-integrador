@@ -16,6 +16,13 @@ class EmpresaResponse(EmpresaCreate):
     model_config = ConfigDict(from_attributes=True)
     id: int
 
+# Usuario (resumido, para embed em VagaResponse)
+class UsuarioResumo(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    nome: str
+    email: str
+
 # Beneficio
 class BeneficioCreate(BaseModel):
     nome: str
@@ -53,11 +60,13 @@ class VagaCreate(BaseModel):
     empresa_id: int
     beneficios_nomes: List[str] = []
     requisitos_lista: List[dict] = []
+    recrutador_id: Optional[int] = None
 
 class VagaResponse(VagaCreate):
     model_config = ConfigDict(from_attributes=True)
     id: int
     empresa: EmpresaResponse
+    recrutador: Optional[UsuarioResumo] = None
     beneficios: List[BeneficioResponse] = []
     requisitos: List[RequisitoResponse] = []
 

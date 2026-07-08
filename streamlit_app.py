@@ -147,6 +147,17 @@ def api_put(path, json=None):
         return None
 
 
+def api_patch(path, json=None):
+    try:
+        r = requests.patch(f"{API_URL}{path}", json=json, headers=_headers(), timeout=10)
+        r.raise_for_status()
+        return r.json()
+    except requests.exceptions.HTTPError as e:
+        detail = e.response.json().get("detail", str(e)) if e.response else str(e)
+        st.error(f"Erro: {detail}")
+        return None
+
+
 def api_delete(path):
     try:
         r = requests.delete(f"{API_URL}{path}", headers=_headers(), timeout=10)
@@ -392,6 +403,11 @@ def _form_nova_vaga():
         st.warning("Nenhuma empresa cadastrada.")
         return
 
+    recrutadores_filtrados = api_get("/auth/recrutadores") or []
+    rec_opcoes = {"(Nenhum)": None}
+    for u in recrutadores_filtrados:
+        rec_opcoes[f"{u['nome']} ({u['perfil']})"] = u["id"]
+
     with st.form("form_nova_vaga"):
         col1, col2 = st.columns(2)
         with col1:
@@ -406,6 +422,7 @@ def _form_nova_vaga():
             tipo_contrato = st.selectbox("Tipo de contrato", ["CLT", "PJ", "temporario", "estagio"])
             publico_alvo  = st.selectbox("Público-alvo", ["ambos", "masculino", "feminino"])
             horario       = st.text_input("Horário")
+        rec_nome = st.selectbox("👤 Recrutador responsável", list(rec_opcoes.keys()))
         descricao = st.text_area("Descrição da vaga", placeholder="Descreva as responsabilidades, o que a pessoa vai fazer no dia a dia...")
         vaga_pcd = st.checkbox("Vaga PcD")
 
@@ -441,6 +458,7 @@ def _form_nova_vaga():
             "vaga_pcd": vaga_pcd, "status": "aberta",
             "quantidade_vagas": int(quantidade_vagas),
             "empresa_id": empresa_opcoes[empresa_nome],
+            "recrutador_id": rec_opcoes[rec_nome],
             "beneficios_nomes": beneficios_nomes,
             "requisitos_lista": requisitos_lista,
         }
@@ -472,7 +490,13 @@ def tela_detalhe(vaga_id):
     st.caption(f"{vaga['empresa']['nome']} — {vaga['local']}")
 
     status_badge = "🟢 Aberta" if vaga["status"] == "aberta" else "⚫ Encerrada"
-    st.markdown(f"**Status:** {status_badge}")
+    rec = vaga.get("recrutador")
+    rec_nome_exib = rec["nome"] if rec else "—"
+    col_status_hdr, col_rec_hdr = st.columns(2)
+    with col_status_hdr:
+        st.markdown(f"**Status:** {status_badge}")
+    with col_rec_hdr:
+        st.markdown(f"**👤 Recrutador responsável:** {rec_nome_exib}")
 
     col1, col2, col3, col4, col5 = st.columns(5)
     salario = (
@@ -561,6 +585,35 @@ def tela_detalhe(vaga_id):
                             if r:
                                 st.success("Status atualizado!")
                                 st.rerun()
+
+        st.divider()
+        st.markdown("**👤 Responsável pela vaga**")
+        recrutadores_disp = api_get("/auth/recrutadores") or []
+        rec_map = {"(Nenhum)": None}
+        for u in recrutadores_disp:
+            rec_map[f"{u['nome']} ({u['perfil']})"] = u["id"]
+        rec_atual = vaga.get("recrutador")
+        rec_atual_key = next(
+            (k for k, v in rec_map.items() if v == (rec_atual["id"] if rec_atual else None)),
+            "(Nenhum)",
+        )
+        col_rec_sel, col_rec_btn = st.columns([3, 1])
+        with col_rec_sel:
+            novo_rec_nome = st.selectbox(
+                "Recrutador responsável",
+                list(rec_map.keys()),
+                index=list(rec_map.keys()).index(rec_atual_key),
+                label_visibility="collapsed",
+                key=f"rec_sel_{vaga_id}",
+            )
+        with col_rec_btn:
+            if st.button("Atribuir", key=f"rec_btn_{vaga_id}", use_container_width=True, type="primary"):
+                novo_rid = rec_map[novo_rec_nome]
+                resp = api_patch(f"/vagas/{vaga_id}/recrutador", json={"recrutador_id": novo_rid})
+                if resp:
+                    nome_exib = novo_rec_nome if novo_rid else "nenhum"
+                    st.success(f"Recrutador atualizado para {nome_exib}!")
+                    st.rerun()
 
         st.divider()
         st.markdown("**⚙️ Ações**")
@@ -656,7 +709,27 @@ def tela_dashboard():
 
     st.markdown("# 📊 Dashboard")
 
-    vagas = api_get("/vagas/")
+    usuario_atual = st.session_state.usuario
+    perfil_atual = usuario_atual["perfil"]
+
+    # Filtro de recrutador (admin vê todos, recrutador vê só as suas)
+    recrutador_filtro_id = None
+    if perfil_atual == "admin":
+        recs_disp = api_get("/auth/recrutadores") or []
+        rec_dash_map = {"Todos os recrutadores": None}
+        for u in recs_disp:
+            rec_dash_map[u["nome"]] = u["id"]
+        rec_dash_sel = st.selectbox("👤 Filtrar por recrutador", list(rec_dash_map.keys()), key="dash_rec_filter")
+        recrutador_filtro_id = rec_dash_map[rec_dash_sel]
+    elif perfil_atual == "recrutador":
+        recrutador_filtro_id = usuario_atual["id"]
+        st.caption(f"👤 Exibindo suas vagas — {usuario_atual['nome']}")
+
+    params_vagas = {}
+    if recrutador_filtro_id is not None:
+        params_vagas["recrutador_id"] = recrutador_filtro_id
+
+    vagas = api_get("/vagas/", params=params_vagas)
     empresas = api_get("/empresas/")
     if vagas is None or empresas is None:
         return

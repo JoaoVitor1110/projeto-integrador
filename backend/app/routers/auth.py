@@ -112,6 +112,17 @@ def listar_usuarios(
     return db.query(models.Usuario).all()
 
 
+@router.get("/recrutadores", response_model=list[UsuarioResponse])
+def listar_recrutadores(
+    db: Session = Depends(get_db),
+    _: models.Usuario = Depends(auth.get_usuario_atual),
+):
+    """Lista usuários com perfil admin ou recrutador (acessível a qualquer usuário autenticado)."""
+    return db.query(models.Usuario).filter(
+        models.Usuario.perfil.in_([models.PerfilEnum.admin, models.PerfilEnum.recrutador])
+    ).all()
+
+
 @router.delete("/usuarios/{usuario_id}", status_code=204)
 def deletar_usuario(
     usuario_id: int,

@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import date
+from pydantic import BaseModel
 
 from app.database import get_db
 from app import models, auth
@@ -59,6 +60,7 @@ def list_vagas(
     tipo_contrato: Optional[TipoContratoEnum] = None,
     vaga_pcd: Optional[bool] = None,
     status: Optional[StatusVagaEnum] = None,
+    recrutador_id: Optional[int] = None,
     db: Session = Depends(get_db),
 ):
     query = db.query(models.Vaga)
@@ -70,6 +72,8 @@ def list_vagas(
         query = query.filter(models.Vaga.vaga_pcd == vaga_pcd)
     if status:
         query = query.filter(models.Vaga.status == status)
+    if recrutador_id is not None:
+        query = query.filter(models.Vaga.recrutador_id == recrutador_id)
     return query.all()
 
 
@@ -97,6 +101,32 @@ def update_vaga(
             data["data_fechamento"] = date.today()
     for k, v in data.items():
         setattr(db_vaga, k, v)
+    db.commit()
+    db.refresh(db_vaga)
+    return db_vaga
+
+
+class AtribuirRecrutadorBody(BaseModel):
+    recrutador_id: Optional[int] = None
+
+
+@router.patch("/{id}/recrutador", response_model=VagaResponse)
+def atribuir_recrutador(
+    id: int,
+    body: AtribuirRecrutadorBody,
+    db: Session = Depends(get_db),
+    atual: models.Usuario = _ESCRITORES,
+):
+    db_vaga = db.query(models.Vaga).filter(models.Vaga.id == id).first()
+    if not db_vaga:
+        raise HTTPException(status_code=404, detail="Vaga não encontrada")
+    if body.recrutador_id is not None:
+        recrutador = db.query(models.Usuario).filter(models.Usuario.id == body.recrutador_id).first()
+        if not recrutador:
+            raise HTTPException(status_code=404, detail="Usuário não encontrado")
+        if recrutador.perfil not in (PerfilEnum.admin, PerfilEnum.recrutador):
+            raise HTTPException(status_code=400, detail="Usuário não tem perfil de recrutador")
+    db_vaga.recrutador_id = body.recrutador_id
     db.commit()
     db.refresh(db_vaga)
     return db_vaga
