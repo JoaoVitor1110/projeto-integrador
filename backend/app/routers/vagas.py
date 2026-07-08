@@ -5,12 +5,13 @@ from datetime import date
 
 from app.database import get_db
 from app import models, auth
-from app.schemas import VagaCreate, VagaResponse
+from app.schemas import VagaCreate, VagaResponse, VagaEncaminhadosUpdate
 from app.models import ModalidadeEnum, TipoContratoEnum, StatusVagaEnum, PerfilEnum
 
 router = APIRouter()
 
 _ESCRITORES = Depends(auth.exigir_perfil(PerfilEnum.admin, PerfilEnum.recrutador))
+_AUTENTICADO = Depends(auth.get_usuario_atual)
 
 
 @router.post("/", response_model=VagaResponse)
@@ -37,7 +38,9 @@ def list_vagas(
     tipo_contrato: Optional[TipoContratoEnum] = None,
     vaga_pcd: Optional[bool] = None,
     status: Optional[StatusVagaEnum] = None,
+    recrutador_responsavel: Optional[str] = None,
     db: Session = Depends(get_db),
+    _: models.Usuario = _AUTENTICADO,
 ):
     query = db.query(models.Vaga)
     if modalidade:
@@ -48,11 +51,17 @@ def list_vagas(
         query = query.filter(models.Vaga.vaga_pcd == vaga_pcd)
     if status:
         query = query.filter(models.Vaga.status == status)
+    if recrutador_responsavel:
+        query = query.filter(models.Vaga.recrutador_responsavel == recrutador_responsavel)
     return query.all()
 
 
 @router.get("/{id}", response_model=VagaResponse)
-def get_vaga(id: int, db: Session = Depends(get_db)):
+def get_vaga(
+    id: int,
+    db: Session = Depends(get_db),
+    _: models.Usuario = _AUTENTICADO,
+):
     vaga = db.query(models.Vaga).filter(models.Vaga.id == id).first()
     if not vaga:
         raise HTTPException(status_code=404, detail="Vaga não encontrada")
@@ -75,6 +84,22 @@ def update_vaga(
             data["data_fechamento"] = date.today()
     for k, v in data.items():
         setattr(db_vaga, k, v)
+    db.commit()
+    db.refresh(db_vaga)
+    return db_vaga
+
+
+@router.patch("/{id}/encaminhados", response_model=VagaResponse)
+def update_encaminhados(
+    id: int,
+    body: VagaEncaminhadosUpdate,
+    db: Session = Depends(get_db),
+    _: models.Usuario = _ESCRITORES,
+):
+    db_vaga = db.query(models.Vaga).filter(models.Vaga.id == id).first()
+    if not db_vaga:
+        raise HTTPException(status_code=404, detail="Vaga não encontrada")
+    db_vaga.encaminhados = body.encaminhados
     db.commit()
     db.refresh(db_vaga)
     return db_vaga
