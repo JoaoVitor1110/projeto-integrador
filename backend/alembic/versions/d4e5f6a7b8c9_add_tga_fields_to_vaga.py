@@ -15,10 +15,15 @@ depends_on = None
 
 
 def upgrade():
+    conn = op.get_bind()
+    existing = {row[1] for row in conn.execute(sa.text("PRAGMA table_info(vagas)"))}
     with op.batch_alter_table('vagas') as batch_op:
-        batch_op.add_column(sa.Column('prioridade', sa.String(), nullable=True))
-        batch_op.add_column(sa.Column('encaminhados', sa.Integer(), nullable=True, server_default='0'))
-        batch_op.add_column(sa.Column('recrutador_responsavel', sa.String(), nullable=True))
+        if 'prioridade' not in existing:
+            batch_op.add_column(sa.Column('prioridade', sa.String(), nullable=True))
+        if 'encaminhados' not in existing:
+            batch_op.add_column(sa.Column('encaminhados', sa.Integer(), nullable=True, server_default='0'))
+        if 'recrutador_responsavel' not in existing:
+            batch_op.add_column(sa.Column('recrutador_responsavel', sa.String(), nullable=True))
 
 
 def downgrade():

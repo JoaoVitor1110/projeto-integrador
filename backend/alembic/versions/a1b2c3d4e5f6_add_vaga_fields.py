@@ -16,9 +16,14 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.add_column('vagas', sa.Column('data_abertura', sa.Date(), nullable=True))
-    op.add_column('vagas', sa.Column('data_fechamento', sa.Date(), nullable=True))
-    op.add_column('vagas', sa.Column('quantidade_vagas', sa.Integer(), nullable=False, server_default='1'))
+    conn = op.get_bind()
+    existing = {row[1] for row in conn.execute(sa.text("PRAGMA table_info(vagas)"))}
+    if 'data_abertura' not in existing:
+        op.add_column('vagas', sa.Column('data_abertura', sa.Date(), nullable=True))
+    if 'data_fechamento' not in existing:
+        op.add_column('vagas', sa.Column('data_fechamento', sa.Date(), nullable=True))
+    if 'quantidade_vagas' not in existing:
+        op.add_column('vagas', sa.Column('quantidade_vagas', sa.Integer(), nullable=False, server_default='1'))
 
 
 def downgrade() -> None:
