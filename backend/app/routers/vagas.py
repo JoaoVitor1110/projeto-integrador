@@ -20,12 +20,34 @@ def create_vaga(
     _: models.Usuario = _ESCRITORES,
 ):
     data = vaga.model_dump()
+    beneficios_nomes = data.pop("beneficios_nomes", [])
+    requisitos_lista = data.pop("requisitos_lista", [])
     if data.get("data_publicacao") is None:
         data["data_publicacao"] = date.today()
     if data.get("data_abertura") is None:
         data["data_abertura"] = date.today()
     db_vaga = models.Vaga(**data)
     db.add(db_vaga)
+    db.flush()
+    for nome in beneficios_nomes:
+        nome = nome.strip()
+        if not nome:
+            continue
+        b = db.query(models.Beneficio).filter(models.Beneficio.nome == nome).first()
+        if not b:
+            b = models.Beneficio(nome=nome)
+            db.add(b)
+            db.flush()
+        db_vaga.beneficios.append(b)
+    for r in requisitos_lista:
+        desc = r.get("descricao", "").strip()
+        nivel = r.get("nivel", "desejavel")
+        if not desc:
+            continue
+        req = models.Requisito(descricao=desc, nivel=nivel)
+        db.add(req)
+        db.flush()
+        db_vaga.requisitos.append(req)
     db.commit()
     db.refresh(db_vaga)
     return db_vaga

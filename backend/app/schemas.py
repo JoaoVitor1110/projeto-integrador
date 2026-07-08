@@ -51,6 +51,8 @@ class VagaCreate(BaseModel):
     data_fechamento: Optional[date] = None
     quantidade_vagas: int = 1
     empresa_id: int
+    beneficios_nomes: List[str] = []
+    requisitos_lista: List[dict] = []
 
 class VagaResponse(VagaCreate):
     model_config = ConfigDict(from_attributes=True)

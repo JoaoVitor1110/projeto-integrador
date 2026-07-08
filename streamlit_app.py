@@ -408,12 +408,31 @@ def _form_nova_vaga():
             horario       = st.text_input("Horário")
         descricao = st.text_area("Descrição da vaga", placeholder="Descreva as responsabilidades, o que a pessoa vai fazer no dia a dia...")
         vaga_pcd = st.checkbox("Vaga PcD")
+
+        st.markdown("**Benefícios** *(um por linha)*")
+        beneficios_txt = st.text_area("beneficios", label_visibility="collapsed",
+            placeholder="Vale Refeição\nPlano de Saúde\nVale Transporte", height=100)
+
+        st.markdown("**Requisitos** *(um por linha — adicione `*` no final para obrigatório)*")
+        requisitos_txt = st.text_area("requisitos", label_visibility="collapsed",
+            placeholder="Python*\nSQL*\nInglês Intermediário", height=100)
+
         salvar = st.form_submit_button("Salvar vaga", type="primary")
 
     if salvar:
         if not titulo or not local or not empresa_nome:
             st.error("Preencha título, local e empresa.")
             return
+        beneficios_nomes = [l.strip() for l in beneficios_txt.splitlines() if l.strip()]
+        requisitos_lista = []
+        for linha in requisitos_txt.splitlines():
+            linha = linha.strip()
+            if not linha:
+                continue
+            if linha.endswith("*"):
+                requisitos_lista.append({"descricao": linha[:-1].strip(), "nivel": "obrigatorio"})
+            else:
+                requisitos_lista.append({"descricao": linha, "nivel": "desejavel"})
         dados = {
             "titulo": titulo, "local": local, "descricao": descricao or None,
             "salario": salario or None,
@@ -422,6 +441,8 @@ def _form_nova_vaga():
             "vaga_pcd": vaga_pcd, "status": "aberta",
             "quantidade_vagas": int(quantidade_vagas),
             "empresa_id": empresa_opcoes[empresa_nome],
+            "beneficios_nomes": beneficios_nomes,
+            "requisitos_lista": requisitos_lista,
         }
         resp = api_post("/vagas/", json=dados)
         if resp:
@@ -1243,24 +1264,39 @@ def _contexto_sistema():
     linhas = []
     try:
         vagas = requests.get(f"{API_URL}/vagas/", headers=h, timeout=10).json()
-        abertas = [v for v in vagas if v.get("status") == "aberta"]
-        linhas.append(f"Total de vagas cadastradas: {len(vagas)} ({len(abertas)} abertas, {len(vagas)-len(abertas)} encerradas).")
-        for v in abertas[:15]:
+        abertas   = [v for v in vagas if v.get("status") == "aberta"]
+        encerradas = [v for v in vagas if v.get("status") != "aberta"]
+        linhas.append(f"Total de vagas: {len(vagas)} ({len(abertas)} abertas, {len(encerradas)} encerradas).\n")
+        linhas.append("=== VAGAS ABERTAS ===")
+        for v in abertas:
             empresa = v.get("empresa", {}).get("nome", "N/A") if isinstance(v.get("empresa"), dict) else "N/A"
+            sal = f"R$ {v['salario']:,.0f}" if v.get("salario") else "não informado"
+            bens = ", ".join(b["nome"] for b in v.get("beneficios", [])) or "nenhum"
+            reqs = ", ".join(f"{r['descricao']}({'obrig.' if r.get('nivel')=='obrigatorio' else 'desej.'})" for r in v.get("requisitos", [])) or "nenhum"
             linhas.append(
-                f"- Vaga: {v['titulo']} | Empresa: {empresa} | "
+                f"- [{v['id']}] {v['titulo']} | Empresa: {empresa} | "
                 f"Modalidade: {v.get('modalidade','')} | Contrato: {v.get('tipo_contrato','')} | "
-                f"Salário: R$ {v.get('salario', 0):,.0f} | PcD: {'Sim' if v.get('vaga_pcd') else 'Não'}"
+                f"Salário: {sal} | PcD: {'Sim' if v.get('vaga_pcd') else 'Não'} | "
+                f"Benefícios: {bens} | Requisitos: {reqs}"
             )
+        if encerradas:
+            linhas.append("\n=== VAGAS ENCERRADAS ===")
+            for v in encerradas:
+                empresa = v.get("empresa", {}).get("nome", "N/A") if isinstance(v.get("empresa"), dict) else "N/A"
+                linhas.append(f"- [{v['id']}] {v['titulo']} | Empresa: {empresa} | Status: {v.get('status','')}")
     except Exception:
         linhas.append("Não foi possível obter dados de vagas.")
     try:
         cands = requests.get(f"{API_URL}/candidaturas/", headers=h, timeout=10).json()
-        linhas.append(f"\nTotal de candidaturas no sistema: {len(cands)}.")
         from collections import Counter
         status_count = Counter(c.get("status") for c in cands)
-        for s, n in status_count.items():
-            linhas.append(f"  - {s}: {n}")
+        linhas.append(f"\nTotal de candidaturas: {len(cands)} — " + ", ".join(f"{s}: {n}" for s, n in status_count.items()))
+    except Exception:
+        pass
+    try:
+        empresas = requests.get(f"{API_URL}/empresas/", headers=h, timeout=10).json()
+        nomes = ", ".join(e["nome"] for e in empresas)
+        linhas.append(f"\nEmpresas cadastradas ({len(empresas)}): {nomes}")
     except Exception:
         pass
     return "\n".join(linhas)
