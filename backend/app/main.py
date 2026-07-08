@@ -217,6 +217,105 @@ def _seed_dados():
             ("Encarregado De Expedição", "G2B PRODUÇÕES", "presencial", "aberta", 1, "2026-07-03", "YUMI", ""),
         ]
 
+        # ── Benefícios (pool comum) ───────────────────────────────────────────
+        BENEF_NOMES = [
+            "Vale Refeição", "Vale Transporte", "Plano de Saúde",
+            "Plano Odontológico", "EPI Completo", "Seguro de Vida",
+            "Vale Alimentação", "Cesta Básica", "Adiantamento Salarial",
+            "PPR / PLR", "Convênio Farmácia", "Uniforme",
+        ]
+        benef_map = {}
+        for bn in BENEF_NOMES:
+            b = models.Beneficio(nome=bn)
+            db.add(b)
+            db.flush()
+            benef_map[bn] = b
+
+        def _benefs_para(titulo: str):
+            t = titulo.lower()
+            base = ["Vale Refeição", "Vale Transporte", "Seguro de Vida"]
+            if any(k in t for k in ["produç", "ajudante", "operador", "manutenç", "soldador",
+                                     "laminador", "caldeireiro", "ferramenteiro", "galvanoplastia",
+                                     "rebobinador", "troquelador", "costureira", "pintor"]):
+                base += ["EPI Completo", "Uniforme", "Plano de Saúde"]
+            elif any(k in t for k in ["assistente", "analista", "auxiliar adm", "adm", "compras",
+                                       "fiscal", "pcp", "recursos humanos", "custos", "roteiro"]):
+                base += ["Plano de Saúde", "Plano Odontológico", "PPR / PLR"]
+            elif any(k in t for k in ["vendedor", "vendas", "consultor", "televendas"]):
+                base += ["Vale Alimentação", "Convênio Farmácia", "PPR / PLR"]
+            elif any(k in t for k in ["motorista", "porteiro", "almoxarife", "almoxarifado",
+                                       "expedição", "encarregado"]):
+                base += ["Cesta Básica", "Adiantamento Salarial", "Uniforme"]
+            elif any(k in t for k in ["técnico", "engenheiro", "analista", "programador",
+                                       "projetista", "inspetor", "especialista"]):
+                base += ["Plano de Saúde", "Plano Odontológico", "PPR / PLR", "Convênio Farmácia"]
+            else:
+                base += ["Cesta Básica", "Plano de Saúde"]
+            return list(dict.fromkeys(base))  # dedupe preservando ordem
+
+        # ── Requisitos (pool reutilizável) ────────────────────────────────────
+        REQ_POOL: dict = {}
+        def _get_req(desc: str, nivel: str):
+            key = (desc, nivel)
+            if key not in REQ_POOL:
+                r = models.Requisito(descricao=desc, nivel=models.NivelRequisitoEnum(nivel))
+                db.add(r)
+                db.flush()
+                REQ_POOL[key] = r
+            return REQ_POOL[key]
+
+        def _reqs_para(titulo: str):
+            t = titulo.lower()
+            reqs = []
+            # Ensino médio é base para quase todos
+            reqs.append(("Ensino Médio Completo", "obrigatorio"))
+            if any(k in t for k in ["produç", "ajudante", "operador de máquina", "laminador",
+                                     "rebobinador", "troquelador", "costureira", "pintor"]):
+                reqs += [("Experiência anterior na função", "desejavel"),
+                         ("Disponibilidade para trabalho em turnos", "desejavel")]
+            elif any(k in t for k in ["eletricista", "mecânico", "manutenção", "caldeireiro",
+                                       "ferramenteiro", "soldador"]):
+                reqs[0] = ("Ensino Técnico ou Superior em área correlata", "obrigatorio")
+                reqs += [("Experiência comprovada na função", "obrigatorio"),
+                         ("NR-10 ou NR-12 atualizada", "desejavel")]
+            elif any(k in t for k in ["assistente", "auxiliar adm", "adm", "pcp", "compras",
+                                       "fiscal", "roteiro"]):
+                reqs += [("Pacote Office (Excel intermediário)", "obrigatorio"),
+                         ("Experiência em rotinas administrativas", "desejavel")]
+            elif any(k in t for k in ["analista", "engenheiro", "especialista", "técnico"]):
+                reqs[0] = ("Ensino Superior Completo ou cursando", "obrigatorio")
+                reqs += [("Experiência mínima de 2 anos na área", "obrigatorio"),
+                         ("Excel avançado / ERP", "desejavel")]
+            elif any(k in t for k in ["vendedor", "vendas", "consultor", "televendas"]):
+                reqs += [("Experiência em vendas internas ou externas", "obrigatorio"),
+                         ("Boa comunicação e perfil comercial", "obrigatorio"),
+                         ("Conhecimento em CRM", "desejavel")]
+            elif any(k in t for k in ["motorista",]):
+                reqs += [("CNH B ou superior válida", "obrigatorio"),
+                         ("Experiência como motorista", "obrigatorio")]
+            elif any(k in t for k in ["almoxarifado", "almoxarife", "expedição"]):
+                reqs += [("Experiência em almoxarifado ou logística", "desejavel"),
+                         ("Conhecimento em WMS ou sistema de estoque", "desejavel")]
+            elif any(k in t for k in ["programador", "projetista"]):
+                reqs[0] = ("Ensino Técnico ou Superior em Mecatrônica/Automação", "obrigatorio")
+                reqs += [("Programação de CLP/Robô", "obrigatorio"),
+                         ("Leitura de desenho técnico", "desejavel")]
+            elif any(k in t for k in ["enfermagem",]):
+                reqs[0] = ("Técnico de Enfermagem com COREN ativo", "obrigatorio")
+                reqs += [("Experiência em medicina do trabalho", "desejavel")]
+            elif any(k in t for k in ["limpeza", "serviços gerais", "aux serviços"]):
+                reqs = [("Experiência em limpeza industrial ou comercial", "desejavel"),
+                        ("Disponibilidade de horário", "obrigatorio")]
+            elif any(k in t for k in ["inspetor", "qualidade", "laboratório"]):
+                reqs += [("Experiência em controle de qualidade ou laboratório", "obrigatorio"),
+                         ("Conhecimento em normas ISO ou BPF", "desejavel")]
+            return reqs
+
+        # ── Inserção das vagas com benefícios e requisitos ────────────────────
+        import random
+        random.seed(42)
+        vagas_inseridas = []
+
         for titulo_v, emp_nome, mod_v, status_v, qtd_v, data_v, rec_nome, desc_v in VAGAS:
             eid = emp_map.get(emp_nome)
             if not eid:
@@ -231,7 +330,63 @@ def _seed_dados():
                 data_abertura=_date.fromisoformat(data_v),
                 data_publicacao=_date.fromisoformat(data_v),
             )
+            for bn in _benefs_para(titulo_v):
+                if bn in benef_map:
+                    vaga.beneficios.append(benef_map[bn])
+            for desc_r, nivel_r in _reqs_para(titulo_v):
+                vaga.requisitos.append(_get_req(desc_r, nivel_r))
             db.add(vaga)
+            db.flush()
+            vagas_inseridas.append(vaga)
+
+        # ── Candidatos fictícios ───────────────────────────────────────────────
+        CANDIDATOS = [
+            ("Ana Paula Ferreira",   "ana.ferreira@email.com",   "11987650001", "São Paulo",    "SP", "1998-03-12"),
+            ("Bruno Souza Lima",     "bruno.lima@email.com",     "11987650002", "Santo André",  "SP", "1995-07-22"),
+            ("Carla Mendes Silva",   "carla.mendes@email.com",   "11987650003", "São Bernardo", "SP", "2000-01-05"),
+            ("Diego Rodrigues",      "diego.rodrigues@email.com","11987650004", "Diadema",      "SP", "1993-11-30"),
+            ("Eduarda Costa",        "eduarda.costa@email.com",  "11987650005", "Mauá",         "SP", "2001-06-18"),
+            ("Felipe Martins",       "felipe.martins@email.com", "11987650006", "São Caetano",  "SP", "1997-09-03"),
+            ("Gabriela Oliveira",    "gabriela.oli@email.com",   "11987650007", "São Paulo",    "SP", "1999-04-25"),
+            ("Henrique Alves",       "henrique.alv@email.com",   "11987650008", "Guarulhos",    "SP", "1994-12-14"),
+            ("Isabella Nascimento",  "isabella.nasc@email.com",  "11987650009", "Osasco",       "SP", "2002-08-09"),
+            ("João Pedro Araújo",    "joaopedro.araujo@email.com","11987650010","São Paulo",    "SP", "1996-02-28"),
+            ("Karen Santos",         "karen.santos@email.com",   "11987650011", "Taboão da Serra","SP","1998-05-17"),
+            ("Lucas Pereira",        "lucas.pereira@email.com",  "11987650012", "São Paulo",    "SP", "2000-10-31"),
+            ("Mariana Gonçalves",    "mariana.gon@email.com",    "11987650013", "São Bernardo", "SP", "1995-03-08"),
+            ("Nathan Lima",          "nathan.lima@email.com",    "11987650014", "Diadema",      "SP", "1999-07-19"),
+            ("Olivia Teixeira",      "olivia.teix@email.com",    "11987650015", "Santo André",  "SP", "2001-12-02"),
+            ("Paulo Henrique Ramos", "ph.ramos@email.com",       "11987650016", "Mauá",         "SP", "1992-06-11"),
+            ("Rafaela Cardoso",      "rafaela.card@email.com",   "11987650017", "São Paulo",    "SP", "1997-01-24"),
+            ("Samuel Barbosa",       "samuel.barb@email.com",    "11987650018", "Guarulhos",    "SP", "2000-09-06"),
+            ("Thaís Moreira",        "thais.moreira@email.com",  "11987650019", "Osasco",       "SP", "1996-04-13"),
+            ("Victor Hugo Pinto",    "victor.pinto@email.com",   "11987650020", "São Paulo",    "SP", "1998-11-27"),
+        ]
+        cands_inseridos = []
+        STATUS_CAND = list(models.StatusCandidaturaEnum)
+        for nome_c, email_c, tel_c, cidade_c, estado_c, nasc_c in CANDIDATOS:
+            c = models.Candidato(
+                nome=nome_c, email=email_c, telefone=tel_c,
+                cidade=cidade_c, estado=estado_c,
+                data_nascimento=_date.fromisoformat(nasc_c),
+            )
+            db.add(c)
+            db.flush()
+            cands_inseridos.append(c)
+
+        # ── Candidaturas aleatórias (3-6 por candidato, nas primeiras 40 vagas) ─
+        vagas_para_cand = vagas_inseridas[:40]
+        for cand in cands_inseridos:
+            qtd = random.randint(3, 6)
+            vagas_escolhidas = random.sample(vagas_para_cand, min(qtd, len(vagas_para_cand)))
+            for vaga in vagas_escolhidas:
+                status_c = random.choice(STATUS_CAND)
+                candidatura = models.Candidatura(
+                    candidato_id=cand.id, vaga_id=vaga.id,
+                    status=status_c,
+                    data_candidatura=vaga.data_abertura,
+                )
+                db.add(candidatura)
 
         db.commit()
         print("[seed] Dados iniciais inseridos com sucesso.")
