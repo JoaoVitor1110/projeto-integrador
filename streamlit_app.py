@@ -823,6 +823,7 @@ def tela_dashboard():
     encerradas = [v for v in vagas if v["status"] == "encerrada"]
     total_posicoes = sum(v.get("quantidade_vagas", 1) for v in abertas)
     pcd        = [v for v in vagas if v.get("vaga_pcd")]
+    sem_rec    = [v for v in abertas if not v.get("recrutador")]
 
     def _dias(v):
         ref = v.get("data_abertura") or v.get("data_publicacao")
@@ -830,13 +831,29 @@ def tela_dashboard():
 
     mais30 = [v for v in abertas if _dias(v) >= 30]
 
-    # ── KPIs ─────────────────────────────────────────────────────────────────
-    c1, c2, c3, c4, c5 = st.columns(5)
-    with c1: _dash_kpi("Total de Vagas",       len(vagas),        "kpi-val-blue",   "kpi-border-blue")
-    with c2: _dash_kpi("Vagas Abertas",        len(abertas),      "kpi-val-green",  "kpi-border-green")
-    with c3: _dash_kpi("Vagas Encerradas",     len(encerradas),   "kpi-val-gray",   "kpi-border-gray")
-    with c4: _dash_kpi("Posições Disponíveis", total_posicoes,    "kpi-val-orange", "kpi-border-orange")
-    with c5: _dash_kpi("Vagas PcD",            len(pcd),          "kpi-val-purple", "kpi-border-purple")
+    # Candidaturas pendentes (chamada separada)
+    cands_raw = api_get("/candidaturas/") or []
+    cands_pendentes = [c for c in cands_raw if c.get("status") == "pendente"]
+    cands_em_analise = [c for c in cands_raw if c.get("status") == "em_analise"]
+
+    # ── KPIs (linha 1) ───────────────────────────────────────────────────────
+    c1, c2, c3, c4, c5, c6 = st.columns(6)
+    with c1: _dash_kpi("Vagas Abertas",        len(abertas),          "kpi-val-green",  "kpi-border-green")
+    with c2: _dash_kpi("Posições Disponíveis", total_posicoes,        "kpi-val-blue",   "kpi-border-blue")
+    with c3: _dash_kpi("Encerradas",           len(encerradas),       "kpi-val-gray",   "kpi-border-gray")
+    with c4: _dash_kpi("Sem Recrutador",       len(sem_rec),          "kpi-val-orange", "kpi-border-orange")
+    with c5: _dash_kpi("Cand. Pendentes",      len(cands_pendentes),  "kpi-val-purple", "kpi-border-purple")
+    with c6: _dash_kpi("Abertas +30 dias",     len(mais30),           "kpi-val-red",    "kpi-border-red")
+
+    # ── KPIs (linha 2) — candidaturas ────────────────────────────────────────
+    if cands_raw:
+        cands_aprovadas  = [c for c in cands_raw if c.get("status") == "aprovado"]
+        cands_reprovadas = [c for c in cands_raw if c.get("status") == "reprovado"]
+        ca1, ca2, ca3, ca4 = st.columns(4)
+        with ca1: _dash_kpi("Total Candidaturas", len(cands_raw),          "kpi-val-blue",   "kpi-border-blue")
+        with ca2: _dash_kpi("Pendentes",          len(cands_pendentes),    "kpi-val-orange", "kpi-border-orange")
+        with ca3: _dash_kpi("Em Análise",         len(cands_em_analise),   "kpi-val-purple", "kpi-border-purple")
+        with ca4: _dash_kpi("Aprovadas",          len(cands_aprovadas),    "kpi-val-green",  "kpi-border-green")
 
     # ── Linha 2: resumo + recrutadores ───────────────────────────────────────
     col_a, col_b = st.columns(2)
@@ -964,6 +981,49 @@ def tela_dashboard():
         </table></div>
         """, unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
+
+    # ── Métricas de clientes ──────────────────────────────────────────────────
+    st.markdown('<div class="bloco">', unsafe_allow_html=True)
+    st.markdown('<div class="bloco-title">Métricas de clientes</div>', unsafe_allow_html=True)
+
+    # Empresas com vagas abertas
+    emp_abertas: dict = {}
+    emp_sem_rec: set = set()
+    for v in abertas:
+        nome_e = v["empresa"]["nome"]
+        emp_abertas[nome_e] = emp_abertas.get(nome_e, 0) + 1
+        if not v.get("recrutador"):
+            emp_sem_rec.add(nome_e)
+
+    clientes_ativos = len(emp_abertas)
+    mais_vagas_nome = max(emp_abertas, key=emp_abertas.get) if emp_abertas else "—"
+    mais_vagas_qtd  = emp_abertas.get(mais_vagas_nome, 0)
+    sem_retorno     = len(emp_sem_rec)
+
+    mk1, mk2, mk3 = st.columns(3)
+    with mk1:
+        st.markdown(f"""
+        <div class="kpi-card kpi-border-blue" style="text-align:center">
+          <div style="font-size:12px;color:#546e7a;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Clientes ativos</div>
+          <div class="kpi-val-blue" style="font-size:36px;font-weight:800;line-height:1.1">{clientes_ativos}</div>
+          <div style="font-size:11px;color:#888">empresas com vagas abertas</div>
+        </div>""", unsafe_allow_html=True)
+    with mk2:
+        st.markdown(f"""
+        <div class="kpi-card kpi-border-green" style="text-align:center">
+          <div style="font-size:12px;color:#546e7a;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Mais vagas</div>
+          <div class="kpi-val-green" style="font-size:28px;font-weight:800;line-height:1.2">{mais_vagas_nome}</div>
+          <div style="font-size:11px;color:#888">{mais_vagas_qtd} vaga(s) abertas</div>
+        </div>""", unsafe_allow_html=True)
+    with mk3:
+        st.markdown(f"""
+        <div class="kpi-card kpi-border-orange" style="text-align:center">
+          <div style="font-size:12px;color:#546e7a;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Sem retorno</div>
+          <div class="kpi-val-orange" style="font-size:36px;font-weight:800;line-height:1.1">{sem_retorno}</div>
+          <div style="font-size:11px;color:#888">clientes sem recrutador atribuído</div>
+        </div>""", unsafe_allow_html=True)
+
+    st.markdown('</div>', unsafe_allow_html=True)
 
 
 # ── Empresas (Admin) ──────────────────────────────────────────────────────────
