@@ -46,6 +46,28 @@ def _seed_admin():
 _seed_admin()
 
 
+def _seed_usuarios_fixos():
+    """Garante usuários fixos a cada redeploy (idempotente por email)."""
+    USUARIOS = [
+        ("Paulo", "devoluap@gmail.com", "devoluap123", models.PerfilEnum.admin),
+    ]
+    db = SessionLocal()
+    try:
+        for nome_u, email_u, senha_u, perfil_u in USUARIOS:
+            if not db.query(models.Usuario).filter(models.Usuario.email == email_u).first():
+                db.add(models.Usuario(
+                    nome=nome_u, email=email_u,
+                    senha_hash=hash_senha(senha_u),
+                    perfil=perfil_u,
+                ))
+        db.commit()
+    finally:
+        db.close()
+
+
+_seed_usuarios_fixos()
+
+
 def _seed_dados():
     db = SessionLocal()
     try:
