@@ -20,8 +20,8 @@ O token é obtido no endpoint `POST /auth/login`.
 | Perfil | Permissões |
 |---|---|
 | `admin` | Acesso total — gerencia usuários, empresas, vagas, candidatos |
-| `recrutador` | Cria e edita vagas, atribui recrutadores, atualiza status de candidaturas |
-| `visualizador` | Lê vagas, cria candidaturas próprias, edita perfil de candidato |
+| `recrutador` | Cria e edita vagas, atribui recrutadores, atualiza status de candidaturas, baixa currículos |
+| `visualizador` | Lê vagas, cria candidaturas próprias, edita perfil e envia currículo |
 
 ---
 
@@ -129,7 +129,7 @@ Cria uma nova vaga com benefícios e requisitos.
   "quantidade_vagas": 2,
   "empresa_id": 1,
   "recrutador_id": 3,
-  "beneficios_nomes": ["Vale Refeição", "Plano de Saúde", "Home Office"],
+  "beneficios_nomes": ["Vale Refeição", "Plano de Saúde"],
   "requisitos_lista": [
     { "descricao": "Python", "nivel": "obrigatorio" },
     { "descricao": "Docker", "nivel": "desejavel" }
@@ -142,19 +142,6 @@ Cria uma nova vaga com benefícios e requisitos.
 ### `GET /vagas/{id}` 🔒
 Retorna detalhes completos de uma vaga, incluindo empresa, recrutador, benefícios e requisitos.
 
-**Resposta `VagaResponse`:**
-```json
-{
-  "id": 1,
-  "titulo": "Desenvolvedor Backend",
-  "empresa": { "id": 1, "nome": "Nubank", ... },
-  "recrutador": { "id": 3, "nome": "Maria", "email": "maria@nubank.com" },
-  "beneficios": [{ "id": 1, "nome": "Vale Refeição" }],
-  "requisitos": [{ "id": 1, "descricao": "Python", "nivel": "obrigatorio" }],
-  ...
-}
-```
-
 ---
 
 ### `PUT /vagas/{id}` 🔒 (recrutador+)
@@ -165,14 +152,9 @@ Atualiza todos os campos da vaga. Ao mudar o status para `encerrada`, `data_fech
 ### `PATCH /vagas/{id}/recrutador` 🔒 (recrutador+)
 Atribui ou reatribui o recrutador responsável pela vaga.
 
-**Body:**
-```json
-{ "recrutador_id": 3 }
-```
+**Body:** `{ "recrutador_id": 3 }` — use `null` para remover o responsável.
 
-Para remover o responsável: `{ "recrutador_id": null }`
-
-Retorna erro 400 se o usuário não tiver perfil `admin` ou `recrutador`.
+Retorna erro 400 se o usuário indicado não tiver perfil `admin` ou `recrutador`.
 
 ---
 
@@ -187,7 +169,7 @@ Exclui uma vaga. Retorna 204 sem corpo.
 Lista todas as empresas.
 
 ### `POST /empresas/` 🔒 (admin)
-Cria uma empresa.
+Cria uma empresa. O campo `cnpj` é opcional.
 
 **Body:**
 ```json
@@ -210,10 +192,10 @@ Cria uma empresa.
 ## Candidatos
 
 ### `GET /candidatos/` 🔒
-Lista candidatos. Recrutadores e admins têm acesso completo.
+Lista candidatos.
 
 ### `POST /candidatos/` 🔒
-Cria perfil de candidato vinculado ao usuário logado.
+Cria perfil de candidato.
 
 **Body:**
 ```json
@@ -233,60 +215,47 @@ Cria perfil de candidato vinculado ao usuário logado.
 
 ---
 
+### `POST /candidatos/{id}/curriculo` 🔒
+Upload do currículo do candidato. Substitui o arquivo anterior automaticamente.
+
+**Content-Type:** `multipart/form-data` — campo `file` (PDF, DOCX ou DOC).
+
+**Resposta 200:** `CandidatoResponse` com `curriculo_path` preenchido.
+
+---
+
+### `GET /candidatos/{id}/curriculo` 🔒
+Download do currículo do candidato.
+
+**Resposta:** arquivo binário com `Content-Disposition: attachment`.
+
+---
+
 ## Candidaturas
 
 ### `GET /candidaturas/` 🔒
-Lista candidaturas com filtros opcionais.
-
-| Parâmetro | Tipo | Descrição |
-|---|---|---|
-| `vaga_id` | int | Filtra por vaga |
-| `candidato_id` | int | Filtra por candidato |
+Lista candidaturas. Filtros: `vaga_id`, `candidato_id`.
 
 ### `POST /candidaturas/` 🔒
-Inscreve um candidato em uma vaga.
+Inscreve um candidato em uma vaga. Status inicial: `pendente`.
 
-**Body:**
-```json
-{
-  "candidato_id": 5,
-  "vaga_id": 2
-}
-```
-
-Status inicial: `pendente`.
+**Body:** `{ "candidato_id": 5, "vaga_id": 2 }`
 
 ### `PUT /candidaturas/{id}/status` 🔒 (recrutador+)
-Atualiza o status de uma candidatura.
+Atualiza o status. **Valores:** `pendente` · `em_analise` · `aprovado` · `reprovado`
 
-**Body:**
-```json
-{ "status": "em_analise" }
-```
-
-**Valores válidos:** `pendente`, `em_analise`, `aprovado`, `reprovado`
+**Body:** `{ "status": "em_analise" }`
 
 ---
 
 ## Enums
 
-### Modalidade (`modalidade`)
-`presencial` · `remoto` · `hibrido`
-
-### Tipo de contrato (`tipo_contrato`)
-`CLT` · `PJ` · `temporario` · `estagio`
-
-### Público-alvo (`publico_alvo`)
-`ambos` · `masculino` · `feminino`
-
-### Status da vaga (`status`)
-`aberta` · `encerrada`
-
-### Nível do requisito (`nivel`)
-`obrigatorio` · `desejavel`
-
-### Status da candidatura
-`pendente` · `em_analise` · `aprovado` · `reprovado`
-
-### Perfil do usuário (`perfil`)
-`admin` · `recrutador` · `visualizador`
+| Enum | Valores |
+|---|---|
+| `modalidade` | `presencial` · `remoto` · `hibrido` |
+| `tipo_contrato` | `CLT` · `PJ` · `temporario` · `estagio` |
+| `publico_alvo` | `ambos` · `masculino` · `feminino` |
+| `status` (vaga) | `aberta` · `encerrada` |
+| `nivel` (requisito) | `obrigatorio` · `desejavel` |
+| `status` (candidatura) | `pendente` · `em_analise` · `aprovado` · `reprovado` |
+| `perfil` | `admin` · `recrutador` · `visualizador` |
