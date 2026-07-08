@@ -20,7 +20,7 @@ Sem instalação — basta abrir no navegador.
 
 ## 📋 Sobre o Projeto
 
-A **Agência de Empregos** é uma plataforma web que conecta empresas recrutadoras e candidatos. O sistema permite publicar e gerenciar vagas, receber candidaturas, acompanhar todo o processo seletivo e contar com um **assistente de IA** para insights e perguntas em linguagem natural.
+A **Agência de Empregos** é uma plataforma web que conecta empresas recrutadoras e candidatos. O sistema permite publicar e gerenciar vagas com benefícios e requisitos, atribuir vagas a recrutadores, acompanhar candidaturas com atualização de status e contar com um **assistente de IA** para insights em linguagem natural.
 
 Desenvolvido como **Projeto Integrador da UC6** do Curso Técnico em Inteligência Artificial do SENAC Lapa Tito, integrando backend REST com FastAPI, banco de dados SQLite, interface web com Streamlit e inteligência artificial via Google Gemini — implantado em infraestrutura real na Hostinger via EasyPanel.
 
@@ -30,21 +30,24 @@ Desenvolvido como **Projeto Integrador da UC6** do Curso Técnico em Inteligênc
 
 | Perfil | Funcionalidades |
 |---|---|
-| 👑 **Admin** | Gerencia usuários, empresas, candidatos e vagas. Acessa o dashboard e o assistente IA. |
-| 📋 **Recrutador** | Cadastra e edita vagas, acompanha candidaturas, vê candidatos inscritos por vaga, acessa o dashboard. |
-| 🙋 **Candidato** | Visualiza vagas, se candidata, acompanha status das candidaturas e edita dados de contato. |
+| 👑 **Admin** | Gerencia usuários, empresas, candidatos e vagas. Atribui e reatribui vagas a recrutadores. Acessa dashboard completo com filtros e assistente IA. |
+| 📋 **Recrutador** | Cadastra e edita vagas (com benefícios e requisitos), acompanha candidaturas, vê candidatos inscritos por vaga, acessa dashboard com visão das suas vagas. |
+| 🙋 **Candidato** | Visualiza vagas com filtros, se candidata, acompanha status das candidaturas e edita dados de contato. |
 
 ### Destaques
+
 - 🔐 Autenticação com JWT (login seguro por token)
-- 📊 Dashboard com KPIs, gráficos por modalidade, contrato, empresa e salário médio
-- ⚠️ Alertas de vagas abertas há mais de 60 dias
+- 👤 **Recrutador responsável por vaga** — atribuição e reatribuição via botão no detalhe da vaga
+- 🎁 **Benefícios e requisitos por vaga** — cadastro inline no formulário (obrigatórios e desejáveis)
+- 📊 **Dashboard completo** com filtros (recrutador, status, modalidade, empresa), KPI cards, barras por modalidade/contrato/empresa/setor, tabela de vagas antigas
+- ⚠️ Tabela de vagas abertas há mais tempo com destaque visual para +30 dias
 - ♿ Filtro de vagas PcD
-- 🤖 Assistente IA integrado (Google Gemini 2.5 Flash) — responde perguntas sobre vagas, candidaturas e carreira
-- 👥 Recrutadores visualizam candidatos inscritos por vaga com dados de contato
-- 🔄 Atualização de status de candidatura diretamente na tela da vaga
-- 📝 Auto-cadastro de candidatos com criação automática de perfil
+- 🤖 **Assistente IA** (Google Gemini 2.5 Flash) com contexto completo de vagas abertas, encerradas, benefícios, requisitos e candidaturas
+- 👥 Recrutadores visualizam candidatos inscritos com dados de contato e podem atualizar status
+- 🔄 Auto-seed de dados na inicialização do backend (10 empresas, 23 vagas, 20 candidatos)
+- 📝 Auto-cadastro de candidatos com criação automática de perfil ao registrar
 - 🛡️ Proteções de integridade (admin não pode se excluir; último admin protegido)
-- 🔒 Segurança reforçada: credenciais exclusivamente por variáveis de ambiente, CORS restrito, todos os endpoints autenticados
+- 🔒 Credenciais exclusivamente por variáveis de ambiente, CORS restrito, endpoints autenticados
 
 ---
 
@@ -65,7 +68,7 @@ Desenvolvido como **Projeto Integrador da UC6** do Curso Técnico em Inteligênc
 │    Hostinger VPS · EasyPanel        │
 │    Docker container                 │
 │    FastAPI + Uvicorn  :8000         │
-│    SQLite → /data/agencia.db        │
+│    SQLite → /app/agencia_empregos.db│
 └─────────────────────────────────────┘
 ```
 
@@ -98,19 +101,18 @@ projeto-integrador/
 │   └── secrets.toml              # API_URL + GEMINI_API_KEY (não versionado)
 └── backend/
     ├── app/
-    │   ├── main.py               # Ponto de entrada da API
-    │   ├── database.py           # Configuração do banco
-    │   ├── models.py             # Modelos ORM
-    │   ├── schemas.py            # Schemas Pydantic
-    │   ├── auth.py               # JWT + bcrypt
+    │   ├── main.py               # Ponto de entrada; auto-seed na inicialização
+    │   ├── database.py           # Configuração do banco SQLite + SQLAlchemy
+    │   ├── models.py             # Modelos ORM (Vaga, Empresa, Candidato, ...)
+    │   ├── schemas.py            # Schemas Pydantic (request/response)
+    │   ├── auth.py               # JWT + bcrypt + dependências de perfil
     │   └── routers/
-    │       ├── auth.py           # Login, registro, usuários
-    │       ├── vagas.py          # CRUD de vagas
+    │       ├── auth.py           # Login, registro, usuários, recrutadores
+    │       ├── vagas.py          # CRUD vagas + atribuição de recrutador
     │       ├── empresas.py       # CRUD de empresas
     │       ├── candidatos.py     # CRUD de candidatos
-    │       └── candidaturas.py   # CRUD de candidaturas + status
+    │       └── candidaturas.py   # CRUD de candidaturas + atualização de status
     ├── alembic/                  # Migrações do banco
-    ├── seed_dados.py             # Script de dados de exemplo
     └── requirements.txt          # Dependências do backend
 ```
 
@@ -133,7 +135,6 @@ source venv/bin/activate   # Linux/Mac
 venv\Scripts\activate      # Windows
 
 pip install -r requirements.txt
-alembic upgrade head
 
 export SECRET_KEY="gere-uma-chave-segura-aqui"
 export ADMIN_EMAIL="admin@exemplo.com"
@@ -142,11 +143,14 @@ export ADMIN_SENHA="SuaSenhaForte!"
 uvicorn app.main:app --reload --port 8000
 ```
 
+Na primeira execução o banco é criado automaticamente e populado com dados de exemplo (10 empresas, 23 vagas, 20 candidatos).
+
 API disponível em `http://localhost:8000` · Docs: `http://localhost:8000/docs`
 
 ### Frontend
 
 ```bash
+cd projeto-integrador
 pip install -r requirements.txt
 
 mkdir -p .streamlit
@@ -156,18 +160,6 @@ GEMINI_API_KEY = "sua-chave-aqui"
 EOF
 
 streamlit run streamlit_app.py
-```
-
-### Popular dados de exemplo
-
-```bash
-cd backend
-pip install requests
-
-SEED_API_URL=http://localhost:8000 \
-SEED_ADMIN_EMAIL=admin@exemplo.com \
-SEED_ADMIN_SENHA=SuaSenhaForte! \
-python seed_dados.py
 ```
 
 ---
@@ -182,7 +174,7 @@ python seed_dados.py
 | `ADMIN_EMAIL` | ✅ | E-mail do admin criado na primeira inicialização |
 | `ADMIN_SENHA` | ✅ | Senha do admin (mín. 8 caracteres) |
 | `ADMIN_NOME` | ❌ | Nome do admin (padrão: `Admin`) |
-| `CORS_ORIGINS` | ❌ | Lista separada por vírgula de origens permitidas |
+| `CORS_ORIGINS` | ❌ | Origens permitidas separadas por vírgula |
 
 ### Frontend (Streamlit Cloud secrets)
 
@@ -198,11 +190,12 @@ python seed_dados.py
 ### Diagrama de relacionamentos
 
 ```
-USUARIOS          EMPRESAS
-                      │ 1:N
-                   VAGAS ──── N:N ──── BENEFICIOS
-                      │ N:N ─────────── REQUISITOS
-                      │ 1:N
+USUARIOS ◄──── recrutador_id ────┐
+                                  │
+EMPRESAS ──── 1:N ───► VAGAS ────┘
+                         │ N:N ──► BENEFICIOS
+                         │ N:N ──► REQUISITOS
+                         │ 1:N
 CANDIDATOS ──── CANDIDATURAS
 ```
 
@@ -210,24 +203,23 @@ CANDIDATOS ──── CANDIDATURAS
 
 | Tabela | Descrição |
 |---|---|
-| `usuarios` | Contas de acesso (admin, recrutador, candidato) |
+| `usuarios` | Contas de acesso (admin, recrutador, visualizador) |
 | `empresas` | Empresas cadastradas no sistema |
-| `vagas` | Oportunidades de emprego |
+| `vagas` | Oportunidades de emprego (inclui `recrutador_id` FK) |
 | `candidatos` | Perfis de candidatos |
 | `candidaturas` | Inscrições de candidatos em vagas |
-| `beneficios` | Benefícios vinculados às vagas |
-| `requisitos` | Requisitos obrigatórios e desejáveis |
+| `beneficios` | Benefícios vinculados às vagas (N:N via `vaga_beneficio`) |
+| `requisitos` | Requisitos obrigatórios e desejáveis (N:N via `vaga_requisito`) |
 
-### Visualizar o banco
+### Auto-seed
 
-```bash
-# No terminal do EasyPanel — ver dados via SQL
-sqlite3 /data/agencia_empregos.db ".tables"
-sqlite3 /data/agencia_empregos.db "SELECT COUNT(*) FROM vagas;"
+Na primeira inicialização do backend (quando `empresas` está vazia), a função `_seed_dados()` em `main.py` popula automaticamente o banco com:
+- 10 empresas reais (Google, Nubank, Itaú, Embraer, etc.)
+- 23 vagas com benefícios e requisitos
+- 20 candidatos fictícios
+- Candidaturas aleatórias
 
-# Ou copie o arquivo e abra no DB Browser for SQLite (sqlitebrowser.org)
-cp /data/agencia_empregos.db /app/agencia_empregos.db
-```
+Redeployes subsequentes não reexecutam o seed.
 
 ---
 
@@ -238,7 +230,7 @@ GitHub (branch main)
     │
     ├── Streamlit Cloud → redeploy automático do frontend a cada push
     └── EasyPanel (Hostinger VPS) → Docker container com FastAPI
-                                    volume /data para o SQLite
+                                    SQLite em /app/agencia_empregos.db
 ```
 
 **Domínio da API:** `https://api.alvesmotionlab.com.br`
@@ -246,17 +238,19 @@ GitHub (branch main)
 ### Comandos úteis no EasyPanel (terminal do container)
 
 ```bash
-# Aplicar migrações
+# Ver tabelas e contagens
+/opt/venv/bin/python3 -c "
+import sqlite3; conn = sqlite3.connect('/app/agencia_empregos.db')
+for t in ['usuarios','empresas','vagas','candidatos','candidaturas']:
+    print(t, conn.execute(f'SELECT COUNT(*) FROM {t}').fetchone()[0])
+"
+
+# Resetar banco (força novo seed no próximo start)
+rm /app/agencia_empregos.db
+# → reinicie o container no EasyPanel
+
+# Aplicar migrações manualmente
 /opt/venv/bin/alembic upgrade head
-
-# Popular banco com dados de exemplo (requer pip install requests)
-SEED_API_URL=https://api.alvesmotionlab.com.br \
-SEED_ADMIN_EMAIL=seu@email.com \
-SEED_ADMIN_SENHA=SuaSenha \
-/opt/venv/bin/python /app/seed_dados.py
-
-# Sincronizar versão do alembic (se necessário)
-/opt/venv/bin/alembic stamp head
 ```
 
 ---
@@ -265,31 +259,44 @@ SEED_ADMIN_SENHA=SuaSenha \
 
 | Método | Rota | Descrição | Auth |
 |---|---|---|---|
-| POST | `/auth/registro` | Auto-cadastro de candidato | ❌ |
+| POST | `/auth/registro` | Auto-cadastro (cria conta + perfil candidato) | ❌ |
 | POST | `/auth/login` | Login (retorna JWT) | ❌ |
 | GET | `/auth/me` | Dados do usuário logado | ✅ |
-| GET/POST | `/vagas/` | Listar / criar vagas | ✅ |
-| GET/PUT | `/vagas/{id}` | Detalhe / editar vaga | ✅ |
+| GET/POST | `/auth/usuarios` | Listar / criar usuários | 👑 Admin |
+| DELETE | `/auth/usuarios/{id}` | Excluir usuário | 👑 Admin |
+| GET | `/auth/recrutadores` | Listar admins e recrutadores | ✅ |
+| GET/POST | `/vagas/` | Listar (com filtros) / criar vagas | ✅ |
+| GET/PUT/DELETE | `/vagas/{id}` | Detalhe / editar / excluir vaga | ✅ |
+| PATCH | `/vagas/{id}/recrutador` | Atribuir / reatribuir recrutador | 📋 Recrutador+ |
 | GET/POST | `/empresas/` | Listar / criar empresas | ✅ |
-| GET/PUT | `/empresas/{id}` | Detalhe / editar empresa | ✅ |
+| GET/PUT/DELETE | `/empresas/{id}` | Detalhe / editar / excluir empresa | ✅ |
 | GET/POST | `/candidatos/` | Listar / criar candidatos | ✅ |
-| GET/PUT | `/candidatos/{id}` | Detalhe / editar candidato | ✅ |
-| GET/POST | `/candidaturas/` | Listar / criar candidaturas | ✅ |
-| PUT | `/candidaturas/{id}/status` | Atualizar status (admin/recrutador) | ✅ |
+| GET/PUT/DELETE | `/candidatos/{id}` | Detalhe / editar / excluir candidato | ✅ |
+| GET/POST | `/candidaturas/` | Listar (com filtros) / criar candidaturas | ✅ |
+| PUT | `/candidaturas/{id}/status` | Atualizar status | 📋 Recrutador+ |
 
-Documentação completa: `https://api.alvesmotionlab.com.br/docs`
+**Filtros disponíveis em `GET /vagas/`:** `modalidade`, `tipo_contrato`, `vaga_pcd`, `status`, `recrutador_id`
+
+Documentação interativa: `https://api.alvesmotionlab.com.br/docs`
 
 ---
 
 ## 🤖 Assistente IA
 
-O assistente usa o **Google Gemini 2.5 Flash** (gratuito) e tem acesso em tempo real aos dados do sistema:
+O assistente usa o **Google Gemini 2.5 Flash** e recebe contexto em tempo real dos dados do sistema:
 
-- Responde perguntas sobre vagas abertas, salários, modalidades e empresas
-- Informa estatísticas de candidaturas por status
-- Responde perguntas gerais sobre carreira, currículo e mercado de trabalho
+- Vagas abertas com salário, modalidade, benefícios e requisitos
+- Vagas encerradas
+- Lista de empresas cadastradas
+- Resumo de candidaturas por status (pendente, em análise, aprovado, reprovado)
 
-**Configuração:** adicione `GEMINI_API_KEY` nos secrets do Streamlit Cloud.
+Exemplos de perguntas:
+> "Quais vagas remotas estão abertas?"
+> "Qual empresa paga melhor?"
+> "Como formatar um currículo para vaga de TI?"
+> "Quantas candidaturas estão em análise?"
+
+**Configuração:** adicione `GEMINI_API_KEY` nos secrets do Streamlit Cloud (Google AI Studio → gratuito).
 
 ---
 
