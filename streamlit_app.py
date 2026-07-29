@@ -1693,15 +1693,81 @@ def _contexto_sistema():
     return "\n".join(linhas)
 
 
+def _responder_chatbot(pergunta: str) -> str:
+    q = pergunta.lower()
+    headers = {"Authorization": f"Bearer {st.session_state.token}"}
+
+    # vagas abertas
+    if any(w in q for w in ["vaga", "vagas", "aberta", "abertas", "disponível", "disponivel"]):
+        try:
+            r = requests.get(f"{API}/vagas/", params={"status": "aberta"}, headers=headers, timeout=10)
+            vagas = r.json() if r.ok else []
+        except Exception:
+            vagas = []
+        if not vagas:
+            return "Não há vagas abertas no momento."
+        remoto = "remoto" in q or "remote" in q
+        pcd = "pcd" in q or "deficiência" in q or "deficiencia" in q
+        if remoto:
+            vagas = [v for v in vagas if v.get("modalidade") == "remoto"]
+        if pcd:
+            vagas = [v for v in vagas if v.get("vaga_pcd")]
+        if not vagas:
+            return "Nenhuma vaga encontrada com esses filtros."
+        linhas = [f"**{v['titulo']}** — {v['empresa']['nome']} | {v['modalidade']} | {v.get('local','')}" for v in vagas[:10]]
+        return f"Encontrei **{len(vagas)}** vaga(s):\n\n" + "\n\n".join(linhas)
+
+    # candidaturas
+    if any(w in q for w in ["candidatura", "candidaturas", "apliquei", "me candidatei", "pendente", "aprovado"]):
+        try:
+            r = requests.get(f"{API}/candidaturas/", headers=headers, timeout=10)
+            cands = r.json() if r.ok else []
+        except Exception:
+            cands = []
+        if not cands:
+            return "Nenhuma candidatura encontrada."
+        pendentes = [c for c in cands if c.get("status") == "pendente"]
+        aprovados = [c for c in cands if c.get("status") == "aprovado"]
+        return (
+            f"Total de candidaturas: **{len(cands)}**\n\n"
+            f"- Pendentes: {len(pendentes)}\n"
+            f"- Aprovadas: {len(aprovados)}\n"
+            f"- Outras: {len(cands) - len(pendentes) - len(aprovados)}"
+        )
+
+    # candidatos
+    if any(w in q for w in ["candidato", "candidatos", "quantos candidatos"]):
+        try:
+            r = requests.get(f"{API}/candidatos/", headers=headers, timeout=10)
+            cands = r.json() if r.ok else []
+        except Exception:
+            cands = []
+        return f"Há **{len(cands)}** candidato(s) cadastrado(s) no sistema."
+
+    # empresas
+    if any(w in q for w in ["empresa", "empresas", "quantas empresas"]):
+        try:
+            r = requests.get(f"{API}/empresas/", headers=headers, timeout=10)
+            emps = r.json() if r.ok else []
+        except Exception:
+            emps = []
+        return f"Há **{len(emps)}** empresa(s) cadastrada(s)."
+
+    # ajuda
+    return (
+        "Posso te ajudar com:\n\n"
+        "- **Vagas abertas** — pergunte 'quais vagas estão abertas?' ou 'vagas remotas'\n"
+        "- **Candidaturas** — pergunte 'quantas candidaturas pendentes?'\n"
+        "- **Candidatos** — pergunte 'quantos candidatos temos?'\n"
+        "- **Empresas** — pergunte 'quantas empresas temos?'\n\n"
+        "Digite sua dúvida!"
+    )
+
+
 def tela_assistente():
     _navbar()
-    st.title("🤖 Assistente IA")
-    st.caption("Tire dúvidas sobre as vagas do sistema ou sobre carreira e emprego em geral.")
-
-    api_key = st.secrets.get("GEMINI_API_KEY", "")
-    if not api_key:
-        st.warning("Configure a secret `GEMINI_API_KEY` no Streamlit Cloud para usar o assistente.")
-        return
+    st.title("💬 Assistente")
+    st.caption("Consulte vagas, candidaturas e estatísticas do sistema.")
 
     if "chat_historico" not in st.session_state:
         st.session_state.chat_historico = []
@@ -1715,37 +1781,10 @@ def tela_assistente():
         st.session_state.chat_historico.append({"role": "user", "content": pergunta})
         with st.chat_message("user"):
             st.markdown(pergunta)
-
+        resposta = _responder_chatbot(pergunta)
         with st.chat_message("assistant"):
-            with st.spinner("Pensando..."):
-                contexto = _contexto_sistema()
-                system_prompt = f"""Você é um assistente especializado em recrutamento e emprego da Agência de Empregos.
-Responda em português, de forma clara, objetiva e resumida. Seja conciso — evite listas longas e textos extensos. Máximo 300 palavras por resposta.
-Você tem acesso aos dados atuais do sistema:
-
-{contexto}
-
-Use esses dados para responder perguntas sobre vagas disponíveis, candidaturas e estatísticas.
-Para perguntas gerais sobre carreira, mercado de trabalho, currículo, entrevistas ou emprego, responda com base no seu conhecimento de forma resumida."""
-
-                contents = [{"role": "user", "parts": [{"text": system_prompt}]},
-                            {"role": "model", "parts": [{"text": "Entendido! Estou pronto para ajudar."}]}]
-                for m in st.session_state.chat_historico[:-1][-10:]:
-                    role = "user" if m["role"] == "user" else "model"
-                    contents.append({"role": role, "parts": [{"text": m["content"]}]})
-                contents.append({"role": "user", "parts": [{"text": pergunta}]})
-
-                try:
-                    url = f"https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key={api_key}"
-                    payload = {"contents": contents, "generationConfig": {"maxOutputTokens": 2048, "temperature": 0.7}}
-                    r = requests.post(url, json=payload, timeout=30)
-                    r.raise_for_status()
-                    resposta = r.json()["candidates"][0]["content"]["parts"][0]["text"]
-                except Exception as e:
-                    resposta = f"Erro ao consultar a IA: {e}"
-
-                st.markdown(resposta)
-                st.session_state.chat_historico.append({"role": "assistant", "content": resposta})
+            st.markdown(resposta)
+        st.session_state.chat_historico.append({"role": "assistant", "content": resposta})
 
     if st.session_state.chat_historico:
         if st.button("🗑️ Limpar conversa", key="limpar_chat"):
