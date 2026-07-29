@@ -67,7 +67,7 @@ class Empresa(Base):
     __tablename__ = "empresas"
     id = Column(Integer, primary_key=True, index=True)
     nome = Column(String, nullable=False)
-    cnpj = Column(String, unique=True, nullable=False)
+    cnpj = Column(String, nullable=True)
     setor = Column(String, nullable=False)
     descricao = Column(Text)
     cidade = Column(String, nullable=False)
@@ -120,6 +120,7 @@ class Candidato(Base):
     cidade = Column(String)
     estado = Column(String(2))
     data_nascimento = Column(Date)
+    curriculo_path = Column(String, nullable=True)
     candidaturas = relationship("Candidatura", back_populates="candidato")
 
 class Candidatura(Base):

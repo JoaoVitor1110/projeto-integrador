@@ -6,7 +6,7 @@ from app.models import ModalidadeEnum, TipoContratoEnum, PublicoAlvoEnum, Status
 # Empresa
 class EmpresaCreate(BaseModel):
     nome: str
-    cnpj: str
+    cnpj: Optional[str] = None
     setor: str
     descricao: Optional[str] = None
     cidade: str
@@ -71,6 +71,7 @@ class CandidatoCreate(BaseModel):
 class CandidatoResponse(CandidatoCreate):
     model_config = ConfigDict(from_attributes=True)
     id: int
+    curriculo_path: Optional[str] = None
 
 # Candidatura
 class CandidaturaCreate(BaseModel):
