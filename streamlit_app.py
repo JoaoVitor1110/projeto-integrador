@@ -1728,21 +1728,11 @@ def _buscar_empresas():
 def _formatar_vagas(vagas):
     if not vagas:
         return "Nenhuma vaga encontrada."
-    linhas = []
-    for v in vagas[:10]:
-        empresa = v.get("empresa", {}).get("nome", "N/A") if isinstance(v.get("empresa"), dict) else "N/A"
-        sal = f"R$ {v['salario']:,.0f}" if v.get("salario") else "a combinar"
-        pcd = " · ♿ PcD" if v.get("vaga_pcd") else ""
-        bens = ", ".join(b["nome"] for b in v.get("beneficios", [])[:3]) if v.get("beneficios") else ""
-        bens_str = f"\n  > 🎁 {bens}" if bens else ""
-        linhas.append(
-            f"**{v['titulo']}**{pcd}\n"
-            f"  🏢 {empresa} · 📍 {v.get('local','')} · 💼 {v.get('tipo_contrato','')} · 💰 {sal}{bens_str}"
-        )
+    # salva lista na sessão para renderizar botões clicáveis na UI
+    st.session_state["chat_vagas_resultado"] = vagas[:10]
     total = len(vagas)
-    header = f"Encontrei **{total}** vaga(s):\n\n"
-    footer = f"\n\n_Mostrando {min(10,total)} de {total}. Use filtros para refinar._" if total > 10 else ""
-    return header + "\n\n---\n\n".join(linhas) + footer
+    footer = f"\n_Mostrando {min(10,total)} de {total} — clique em **Ver vaga** para abrir os detalhes._" if total > 10 else "\n_Clique em **Ver vaga** para abrir os detalhes._"
+    return f"Encontrei **{total}** vaga(s):{footer}"
 
 def _responder_chatbot(pergunta: str) -> str:
     q = pergunta.lower().strip()
@@ -1909,6 +1899,7 @@ def tela_assistente():
     # processar atalho clicado
     pergunta_atalho = st.session_state.pop("chat_input_atalho", None)
     if pergunta_atalho:
+        st.session_state.pop("chat_vagas_resultado", None)
         st.session_state.chat_historico.append({"role": "user", "content": pergunta_atalho})
         with st.chat_message("user"):
             st.markdown(pergunta_atalho)
@@ -1918,9 +1909,30 @@ def tela_assistente():
         st.session_state.chat_historico.append({"role": "assistant", "content": resposta})
         st.rerun()
 
+    # cards clicáveis das vagas do último resultado
+    vagas_resultado = st.session_state.get("chat_vagas_resultado", [])
+    if vagas_resultado:
+        for v in vagas_resultado:
+            empresa = v.get("empresa", {}).get("nome", "N/A") if isinstance(v.get("empresa"), dict) else "N/A"
+            sal = f"R$ {v['salario']:,.0f}" if v.get("salario") else "a combinar"
+            pcd = " · ♿ PcD" if v.get("vaga_pcd") else ""
+            bens = ", ".join(b["nome"] for b in v.get("beneficios", [])[:3]) if v.get("beneficios") else ""
+            with st.container(border=True):
+                col1, col2 = st.columns([4, 1])
+                with col1:
+                    st.markdown(f"**{v['titulo']}**{pcd}")
+                    st.caption(f"🏢 {empresa} · 📍 {v.get('local','')} · 💼 {v.get('tipo_contrato','')} · 💰 {sal}")
+                    if bens:
+                        st.caption(f"🎁 {bens}")
+                with col2:
+                    if st.button("Ver vaga", key=f"chat_vaga_{v['id']}", use_container_width=True, type="primary"):
+                        st.session_state["vaga_aberta"] = v["id"]
+                        st.rerun()
+
     # input livre
     pergunta = st.chat_input("Digite sua pergunta...")
     if pergunta:
+        st.session_state.pop("chat_vagas_resultado", None)
         st.session_state.chat_historico.append({"role": "user", "content": pergunta})
         with st.chat_message("user"):
             st.markdown(pergunta)
@@ -1932,6 +1944,7 @@ def tela_assistente():
     if st.session_state.chat_historico:
         if st.button("🗑️ Limpar conversa", key="limpar_chat"):
             st.session_state.chat_historico = []
+            st.session_state.pop("chat_vagas_resultado", None)
             st.rerun()
 
 
