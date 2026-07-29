@@ -1693,89 +1693,232 @@ def _contexto_sistema():
     return "\n".join(linhas)
 
 
-def _responder_chatbot(pergunta: str) -> str:
-    q = pergunta.lower()
+def _buscar_vagas(filtros=None):
     headers = {"Authorization": f"Bearer {st.session_state.token}"}
+    try:
+        r = requests.get(f"{API_URL}/vagas/", params=filtros or {}, headers=headers, timeout=10)
+        return r.json() if r.ok else []
+    except Exception:
+        return []
 
-    # vagas abertas
-    if any(w in q for w in ["vaga", "vagas", "aberta", "abertas", "disponível", "disponivel"]):
-        try:
-            r = requests.get(f"{API}/vagas/", params={"status": "aberta"}, headers=headers, timeout=10)
-            vagas = r.json() if r.ok else []
-        except Exception:
-            vagas = []
-        if not vagas:
-            return "Não há vagas abertas no momento."
-        remoto = "remoto" in q or "remote" in q
-        pcd = "pcd" in q or "deficiência" in q or "deficiencia" in q
-        if remoto:
-            vagas = [v for v in vagas if v.get("modalidade") == "remoto"]
-        if pcd:
-            vagas = [v for v in vagas if v.get("vaga_pcd")]
-        if not vagas:
-            return "Nenhuma vaga encontrada com esses filtros."
-        linhas = [f"**{v['titulo']}** — {v['empresa']['nome']} | {v['modalidade']} | {v.get('local','')}" for v in vagas[:10]]
-        return f"Encontrei **{len(vagas)}** vaga(s):\n\n" + "\n\n".join(linhas)
+def _buscar_candidaturas():
+    headers = {"Authorization": f"Bearer {st.session_state.token}"}
+    try:
+        r = requests.get(f"{API_URL}/candidaturas/", headers=headers, timeout=10)
+        return r.json() if r.ok else []
+    except Exception:
+        return []
 
-    # candidaturas
-    if any(w in q for w in ["candidatura", "candidaturas", "apliquei", "me candidatei", "pendente", "aprovado"]):
-        try:
-            r = requests.get(f"{API}/candidaturas/", headers=headers, timeout=10)
-            cands = r.json() if r.ok else []
-        except Exception:
-            cands = []
+def _buscar_candidatos():
+    headers = {"Authorization": f"Bearer {st.session_state.token}"}
+    try:
+        r = requests.get(f"{API_URL}/candidatos/", headers=headers, timeout=10)
+        return r.json() if r.ok else []
+    except Exception:
+        return []
+
+def _buscar_empresas():
+    headers = {"Authorization": f"Bearer {st.session_state.token}"}
+    try:
+        r = requests.get(f"{API_URL}/empresas/", headers=headers, timeout=10)
+        return r.json() if r.ok else []
+    except Exception:
+        return []
+
+def _formatar_vagas(vagas):
+    if not vagas:
+        return "Nenhuma vaga encontrada."
+    linhas = []
+    for v in vagas[:10]:
+        empresa = v.get("empresa", {}).get("nome", "N/A") if isinstance(v.get("empresa"), dict) else "N/A"
+        sal = f"R$ {v['salario']:,.0f}" if v.get("salario") else "a combinar"
+        pcd = " · ♿ PcD" if v.get("vaga_pcd") else ""
+        bens = ", ".join(b["nome"] for b in v.get("beneficios", [])[:3]) if v.get("beneficios") else ""
+        bens_str = f"\n  > 🎁 {bens}" if bens else ""
+        linhas.append(
+            f"**{v['titulo']}**{pcd}\n"
+            f"  🏢 {empresa} · 📍 {v.get('local','')} · 💼 {v.get('tipo_contrato','')} · 💰 {sal}{bens_str}"
+        )
+    total = len(vagas)
+    header = f"Encontrei **{total}** vaga(s):\n\n"
+    footer = f"\n\n_Mostrando {min(10,total)} de {total}. Use filtros para refinar._" if total > 10 else ""
+    return header + "\n\n---\n\n".join(linhas) + footer
+
+def _responder_chatbot(pergunta: str) -> str:
+    q = pergunta.lower().strip()
+
+    # ── vagas remotas
+    if any(w in q for w in ["remoto", "remote", "home office", "trabalho remoto"]):
+        vagas = _buscar_vagas({"status": "aberta", "modalidade": "remoto"})
+        return _formatar_vagas(vagas)
+
+    # ── vagas híbridas
+    if "híbrido" in q or "hibrido" in q:
+        vagas = _buscar_vagas({"status": "aberta", "modalidade": "hibrido"})
+        return _formatar_vagas(vagas)
+
+    # ── vagas presenciais
+    if "presencial" in q:
+        vagas = _buscar_vagas({"status": "aberta", "modalidade": "presencial"})
+        return _formatar_vagas(vagas)
+
+    # ── vagas PcD
+    if "pcd" in q or "deficiên" in q or "deficien" in q or "acessib" in q:
+        vagas = _buscar_vagas({"status": "aberta", "vaga_pcd": True})
+        return _formatar_vagas(vagas)
+
+    # ── vagas CLT
+    if "clt" in q:
+        vagas = _buscar_vagas({"status": "aberta", "tipo_contrato": "CLT"})
+        return _formatar_vagas(vagas)
+
+    # ── vagas PJ
+    if " pj" in q or q == "pj" or "pessoa jurídica" in q:
+        vagas = _buscar_vagas({"status": "aberta", "tipo_contrato": "PJ"})
+        return _formatar_vagas(vagas)
+
+    # ── estágio
+    if "estágio" in q or "estagio" in q or "estagiário" in q:
+        vagas = _buscar_vagas({"status": "aberta", "tipo_contrato": "estagio"})
+        return _formatar_vagas(vagas)
+
+    # ── vagas abertas (geral)
+    if any(w in q for w in ["vaga", "vagas", "aberta", "abertas", "disponível", "disponivel", "emprego", "oportunidade"]):
+        vagas = _buscar_vagas({"status": "aberta"})
+        return _formatar_vagas(vagas)
+
+    # ── candidaturas por status
+    if "aprovad" in q:
+        cands = _buscar_candidaturas()
+        lista = [c for c in cands if c.get("status") == "aprovado"]
+        nomes = "\n".join(f"- **{c['vaga']['titulo']}** ({c['candidato']['nome']})" for c in lista[:8]) if lista else "_Nenhuma._"
+        return f"✅ **{len(lista)} candidatura(s) aprovada(s):**\n\n{nomes}"
+
+    if "reprovad" in q:
+        cands = _buscar_candidaturas()
+        lista = [c for c in cands if c.get("status") == "reprovado"]
+        return f"❌ **{len(lista)} candidatura(s) reprovada(s).**"
+
+    if "análise" in q or "analise" in q or "em análise" in q:
+        cands = _buscar_candidaturas()
+        lista = [c for c in cands if c.get("status") == "em_analise"]
+        nomes = "\n".join(f"- **{c['vaga']['titulo']}** ({c['candidato']['nome']})" for c in lista[:8]) if lista else "_Nenhuma._"
+        return f"🔍 **{len(lista)} candidatura(s) em análise:**\n\n{nomes}"
+
+    if any(w in q for w in ["pendente", "pendentes"]):
+        cands = _buscar_candidaturas()
+        lista = [c for c in cands if c.get("status") == "pendente"]
+        nomes = "\n".join(f"- **{c['vaga']['titulo']}** ({c['candidato']['nome']})" for c in lista[:8]) if lista else "_Nenhuma._"
+        return f"⏳ **{len(lista)} candidatura(s) pendente(s):**\n\n{nomes}"
+
+    if any(w in q for w in ["candidatura", "candidaturas", "apliquei", "me candidatei", "inscrição", "inscricao"]):
+        cands = _buscar_candidaturas()
         if not cands:
-            return "Nenhuma candidatura encontrada."
-        pendentes = [c for c in cands if c.get("status") == "pendente"]
-        aprovados = [c for c in cands if c.get("status") == "aprovado"]
+            return "Nenhuma candidatura encontrada no sistema."
+        from collections import Counter
+        contagem = Counter(c.get("status") for c in cands)
         return (
-            f"Total de candidaturas: **{len(cands)}**\n\n"
-            f"- Pendentes: {len(pendentes)}\n"
-            f"- Aprovadas: {len(aprovados)}\n"
-            f"- Outras: {len(cands) - len(pendentes) - len(aprovados)}"
+            f"📋 **Resumo de candidaturas ({len(cands)} total):**\n\n"
+            f"- ⏳ Pendentes: **{contagem.get('pendente', 0)}**\n"
+            f"- 🔍 Em análise: **{contagem.get('em_analise', 0)}**\n"
+            f"- ✅ Aprovadas: **{contagem.get('aprovado', 0)}**\n"
+            f"- ❌ Reprovadas: **{contagem.get('reprovado', 0)}**"
         )
 
-    # candidatos
-    if any(w in q for w in ["candidato", "candidatos", "quantos candidatos"]):
-        try:
-            r = requests.get(f"{API}/candidatos/", headers=headers, timeout=10)
-            cands = r.json() if r.ok else []
-        except Exception:
-            cands = []
-        return f"Há **{len(cands)}** candidato(s) cadastrado(s) no sistema."
+    # ── candidatos
+    if any(w in q for w in ["candidato", "candidatos", "quantos candidatos", "pessoas cadastradas"]):
+        cands = _buscar_candidatos()
+        return f"👤 Há **{len(cands)}** candidato(s) cadastrado(s) no sistema."
 
-    # empresas
-    if any(w in q for w in ["empresa", "empresas", "quantas empresas"]):
-        try:
-            r = requests.get(f"{API}/empresas/", headers=headers, timeout=10)
-            emps = r.json() if r.ok else []
-        except Exception:
-            emps = []
-        return f"Há **{len(emps)}** empresa(s) cadastrada(s)."
+    # ── empresas
+    if any(w in q for w in ["empresa", "empresas", "quantas empresas", "parceiros"]):
+        emps = _buscar_empresas()
+        nomes = ", ".join(e["nome"] for e in emps[:10])
+        return f"🏢 **{len(emps)} empresa(s) cadastrada(s):**\n\n{nomes}"
 
-    # ajuda
+    # ── resumo geral / relatório
+    if any(w in q for w in ["resumo", "relatório", "relatorio", "geral", "estatística", "estatistica", "dashboard", "números", "numeros"]):
+        vagas = _buscar_vagas({"status": "aberta"})
+        cands = _buscar_candidaturas()
+        candidatos = _buscar_candidatos()
+        emps = _buscar_empresas()
+        from collections import Counter
+        contagem = Counter(c.get("status") for c in cands)
+        return (
+            f"📊 **Resumo do sistema:**\n\n"
+            f"- 📋 Vagas abertas: **{len(vagas)}**\n"
+            f"- 🏢 Empresas: **{len(emps)}**\n"
+            f"- 👤 Candidatos: **{len(candidatos)}**\n"
+            f"- 📨 Candidaturas: **{len(cands)}** "
+            f"(✅ {contagem.get('aprovado',0)} aprovadas · "
+            f"⏳ {contagem.get('pendente',0)} pendentes · "
+            f"🔍 {contagem.get('em_analise',0)} em análise)"
+        )
+
+    # ── ajuda / menu
     return (
-        "Posso te ajudar com:\n\n"
-        "- **Vagas abertas** — pergunte 'quais vagas estão abertas?' ou 'vagas remotas'\n"
-        "- **Candidaturas** — pergunte 'quantas candidaturas pendentes?'\n"
-        "- **Candidatos** — pergunte 'quantos candidatos temos?'\n"
-        "- **Empresas** — pergunte 'quantas empresas temos?'\n\n"
-        "Digite sua dúvida!"
+        "👋 Olá! Posso te ajudar com:\n\n"
+        "**Vagas:**\n"
+        "- _vagas abertas_ · _vagas remotas_ · _vagas presenciais_ · _vagas híbridas_\n"
+        "- _vagas CLT_ · _vagas PJ_ · _estágio_ · _vagas PcD_\n\n"
+        "**Candidaturas:**\n"
+        "- _candidaturas pendentes_ · _candidaturas aprovadas_ · _candidaturas em análise_\n\n"
+        "**Geral:**\n"
+        "- _resumo geral_ · _quantas empresas_ · _quantos candidatos_\n\n"
+        "💬 Digite sua pergunta ou clique em um atalho abaixo!"
     )
+
+
+_ATALHOS = [
+    ("📋 Vagas abertas", "vagas abertas"),
+    ("🏠 Vagas remotas", "vagas remotas"),
+    ("♿ Vagas PcD", "vagas pcd"),
+    ("📝 CLT", "vagas CLT"),
+    ("💼 PJ", "vagas PJ"),
+    ("🎓 Estágio", "estágio"),
+    ("⏳ Pendentes", "candidaturas pendentes"),
+    ("✅ Aprovadas", "candidaturas aprovadas"),
+    ("📊 Resumo geral", "resumo geral"),
+]
 
 
 def tela_assistente():
     _navbar()
     st.title("💬 Assistente")
-    st.caption("Consulte vagas, candidaturas e estatísticas do sistema.")
+    st.caption("Consulte vagas, candidaturas e estatísticas — clique em um atalho ou digite sua pergunta.")
 
     if "chat_historico" not in st.session_state:
         st.session_state.chat_historico = []
+    if "chat_input_atalho" not in st.session_state:
+        st.session_state.chat_input_atalho = None
 
+    # atalhos rápidos
+    st.markdown("**Atalhos rápidos:**")
+    cols = st.columns(3)
+    for i, (label, pergunta) in enumerate(_ATALHOS):
+        if cols[i % 3].button(label, key=f"atalho_{i}", use_container_width=True):
+            st.session_state.chat_input_atalho = pergunta
+
+    st.divider()
+
+    # histórico
     for msg in st.session_state.chat_historico:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
 
+    # processar atalho clicado
+    pergunta_atalho = st.session_state.pop("chat_input_atalho", None)
+    if pergunta_atalho:
+        st.session_state.chat_historico.append({"role": "user", "content": pergunta_atalho})
+        with st.chat_message("user"):
+            st.markdown(pergunta_atalho)
+        resposta = _responder_chatbot(pergunta_atalho)
+        with st.chat_message("assistant"):
+            st.markdown(resposta)
+        st.session_state.chat_historico.append({"role": "assistant", "content": resposta})
+        st.rerun()
+
+    # input livre
     pergunta = st.chat_input("Digite sua pergunta...")
     if pergunta:
         st.session_state.chat_historico.append({"role": "user", "content": pergunta})
