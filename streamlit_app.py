@@ -2139,12 +2139,9 @@ def tela_assistente():
     if pergunta:
         st.session_state.pop("chat_vagas_resultado", None)
         st.session_state.chat_historico.append({"role": "user", "content": pergunta})
-        with st.chat_message("user"):
-            st.markdown(pergunta)
         resposta = _responder_chatbot(pergunta)
-        with st.chat_message("assistant"):
-            st.markdown(resposta)
         st.session_state.chat_historico.append({"role": "assistant", "content": resposta})
+        st.rerun()
 
     if st.session_state.chat_historico:
         if st.button("🗑️ Limpar conversa", key="limpar_chat"):
