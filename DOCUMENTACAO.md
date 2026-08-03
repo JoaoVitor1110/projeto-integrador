@@ -48,9 +48,9 @@ São Paulo – SP
 
 ## RESUMO
 
-O presente trabalho descreve o desenvolvimento de um sistema web completo para gestão de vagas de emprego, denominado **Agência de Empregos**, elaborado como Projeto Integrador da Unidade Curricular 6 (UC6) do Curso Técnico em Inteligência Artificial do SENAC Lapa Tito. A solução integra um backend construído com o framework FastAPI em linguagem Python, banco de dados relacional SQLite gerenciado via SQLAlchemy e interface web interativa desenvolvida com Streamlit. O sistema permite o cadastro e gerenciamento de empresas, vagas de emprego com descrição detalhada, candidatos e candidaturas, com controle de acesso baseado em perfis de usuário (Administrador, Recrutador e Candidato). O backend é conteinerizado com Docker e hospedado em VPS (Hostinger) gerenciada pelo EasyPanel, com domínio próprio `api.alvesmotionlab.com.br` e certificado HTTPS via Cloudflare. O frontend é publicado no Streamlit Cloud com deploy automático a partir do repositório GitHub. O sistema encontra-se em pleno funcionamento no endereço **https://projeto-integrador-senac.streamlit.app**.
+O presente trabalho descreve o desenvolvimento de um sistema web completo para gestão de vagas de emprego, denominado **Agência de Empregos**, elaborado como Projeto Integrador da Unidade Curricular 6 (UC6) do Curso Técnico em Inteligência Artificial do SENAC Lapa Tito. A solução integra um backend construído com o framework FastAPI em linguagem Python, banco de dados relacional SQLite gerenciado via SQLAlchemy e interface web interativa desenvolvida com Streamlit. O sistema permite o cadastro e gerenciamento de empresas, vagas de emprego com descrição detalhada, candidatos e candidaturas, com controle de acesso baseado em perfis de usuário (Administrador, Recrutador e Candidato). O backend é conteinerizado com Docker e hospedado em VPS (Hostinger) gerenciada pelo EasyPanel, com domínio próprio `api.alvesmotionlab.com.br` e certificado HTTPS via Cloudflare. O frontend é publicado no Streamlit Cloud com deploy automático a partir do repositório GitHub. O sistema conta ainda com um **Assistente por palavras-chave** que permite consultar vagas, candidaturas e estatísticas do sistema por meio de linguagem natural, sem dependência de serviços externos de inteligência artificial. O sistema encontra-se em pleno funcionamento no endereço **https://projeto-integrador-senac.streamlit.app**.
 
-**Palavras-chave:** sistema web; gestão de vagas; FastAPI; Streamlit; Docker; EasyPanel; Python.
+**Palavras-chave:** sistema web; gestão de vagas; FastAPI; Streamlit; Docker; EasyPanel; Python; chatbot; assistente.
 
 ---
 
@@ -69,7 +69,8 @@ O presente trabalho descreve o desenvolvimento de um sistema web completo para g
    - 5.4 Diagrama Entidade-Relacionamento
    - 5.5 Controle de Acesso e Perfis de Usuário
    - 5.6 Funcionalidades do Sistema
-   - 5.7 Endpoints da API REST
+   - 5.7 Assistente por Palavras-Chave (Chatbot)
+   - 5.8 Endpoints da API REST
 6. GUIA DE ACESSO E UTILIZAÇÃO
    - 6.1 Acesso ao Sistema
    - 6.2 Como Criar um Usuário
@@ -77,8 +78,9 @@ O presente trabalho descreve o desenvolvimento de um sistema web completo para g
    - 6.4 Como Cadastrar uma Vaga
    - 6.5 Como se Candidatar a uma Vaga
    - 6.6 Como Gerenciar Candidaturas (Recrutador/Admin)
-   - 6.7 Como Acessar o Banco de Dados
-   - 6.8 Como Acessar o Servidor (EasyPanel)
+   - 6.7 Como Usar o Assistente
+   - 6.8 Como Acessar o Banco de Dados
+   - 6.9 Como Acessar o Servidor (EasyPanel)
 7. INFRAESTRUTURA E IMPLANTAÇÃO
    - 7.1 Servidor Backend (EasyPanel + Docker)
    - 7.2 Frontend (Streamlit Cloud)
@@ -143,6 +145,7 @@ Desenvolver um sistema web completo e funcional para gestão de vagas de emprego
 - Hospedar o frontend no Streamlit Cloud com deploy automático a partir do GitHub;
 - Permitir que recrutadores visualizem os candidatos inscritos em cada vaga com dados de contato e atualizem o status de cada candidatura;
 - Versionar o código-fonte no GitHub com histórico de commits documentado;
+- Implementar um assistente por palavras-chave que permita consultar vagas, candidaturas e estatísticas do sistema por meio de linguagem natural, sem dependência de serviços externos de inteligência artificial generativa;
 - Elaborar documentação técnica completa em conformidade com as normas da ABNT.
 
 ---
@@ -419,7 +422,65 @@ Painel com dados de contato do candidato (editáveis via expander), histórico d
 
 ---
 
-### 5.7 Endpoints da API REST
+### 5.7 Assistente por Palavras-Chave (Chatbot)
+
+O sistema conta com um **Assistente** acessível pela navbar, que permite ao usuário consultar dados do sistema por meio de linguagem natural sem a necessidade de navegar por menus ou aplicar filtros manualmente.
+
+#### Funcionamento
+
+O assistente utiliza uma estrutura `if/elif/else` que analisa as palavras presentes na mensagem digitada pelo usuário e direciona a consulta para o endpoint da API correspondente. Toda consulta é feita em tempo real ao backend, garantindo que os dados retornados reflitam sempre o estado atual do banco de dados.
+
+**Não há dependência de inteligência artificial generativa** (como GPT ou Gemini). O processamento ocorre integralmente no próprio sistema, sem custo adicional e sem envio de dados para serviços externos.
+
+#### Botões de Atalho Rápido
+
+Na parte superior da tela do assistente, nove botões de atalho permitem consultas com um único clique:
+
+| Botão | Consulta equivalente |
+|---|---|
+| 📋 Vagas abertas | Lista todas as vagas com status "aberta" |
+| 🏠 Vagas remotas | Filtra vagas com modalidade "remoto" |
+| ♿ Vagas PcD | Filtra vagas destinadas a PcD |
+| 📝 CLT | Filtra vagas com tipo de contrato CLT |
+| 💼 PJ | Filtra vagas com tipo de contrato PJ |
+| 🎓 Estágio | Filtra vagas de estágio |
+| ⏳ Pendentes | Lista candidaturas com status "pendente" |
+| ✅ Aprovadas | Lista candidaturas com status "aprovado" |
+| 📊 Resumo geral | Exibe estatísticas completas do sistema |
+
+#### Palavras-Chave Reconhecidas
+
+| Categoria | Palavras / frases aceitas |
+|---|---|
+| **Saudações** | oi, olá, bom dia, boa tarde, boa noite, tudo bem |
+| **Vagas abertas** | vaga, vagas, emprego, oportunidade, disponível, tem vaga, ver vagas, quero vagas |
+| **Modalidade remoto** | remoto, home office, trabalho remoto, trabalhar de casa, a distância |
+| **Modalidade híbrido** | híbrido, hibrido, semi presencial |
+| **Modalidade presencial** | presencial, no escritório |
+| **Contrato CLT** | clt, carteira assinada, carteira de trabalho, com registro |
+| **Contrato PJ** | pj, pessoa jurídica, nota fiscal, cnpj |
+| **Estágio** | estágio, estagio, estagiário, estagiar |
+| **Temporário** | temporário, temporario, contrato temporário |
+| **Vagas PcD** | pcd, deficiência, deficiente, acessibilidade, inclusão, portador |
+| **Vagas encerradas** | encerrada, fechada, inativa |
+| **Candidaturas** | candidatura, inscrição, me candidatei, me inscrevi |
+| **Status aprovado** | aprovado, aprovação, fui aprovado |
+| **Status reprovado** | reprovado, rejeitado, negado |
+| **Status em análise** | em análise, sendo analisado, em avaliação |
+| **Status pendente** | pendente, aguardando, sem resposta |
+| **Candidatos** | candidato, candidatos, quem se cadastrou |
+| **Empresas** | empresa, empresas, quais empresas, parceiros |
+| **Resumo geral** | resumo, relatório, dados, dashboard, números, visão geral, o que tem no sistema |
+
+#### Resultado Interativo
+
+Quando o assistente retorna uma lista de vagas, cada vaga é exibida como um **card clicável** com:
+- Título, indicador PcD, empresa, localidade, tipo de contrato, salário e benefícios
+- Botão **"Ver vaga"** que navega diretamente para a página de detalhes daquela vaga
+
+---
+
+### 5.8 Endpoints da API REST
 
 A documentação interativa completa (Swagger UI) está disponível em:
 
@@ -561,7 +622,27 @@ Para editar dados de contato:
 
 ---
 
-### 6.7 Como Acessar o Banco de Dados
+### 6.7 Como Usar o Assistente
+
+1. Faça login com qualquer tipo de conta
+2. Na navbar, clique em **"💬 Assistente"**
+3. Use os **botões de atalho** para consultas rápidas com um clique, ou
+4. Digite sua pergunta livremente no campo de texto, por exemplo:
+   - *"quais vagas estão abertas?"*
+   - *"tem vaga remota?"*
+   - *"vagas CLT"*
+   - *"candidaturas pendentes"*
+   - *"resumo geral"*
+   - *"quantas empresas temos?"*
+5. O assistente retorna os dados em tempo real do banco de dados
+6. Quando retornar vagas, clique em **"Ver vaga"** em qualquer card para abrir os detalhes daquela vaga
+7. Para limpar o histórico da conversa, clique em **"🗑️ Limpar conversa"**
+
+> **Observação:** o assistente reconhece variações de escrita — com ou sem acentuação, maiúsculas ou minúsculas, abreviações ou frases completas.
+
+---
+
+### 6.8 Como Acessar o Banco de Dados
 
 #### Opção A — Via Swagger UI (Recomendado)
 
@@ -622,7 +703,7 @@ SELECT nome, email, perfil FROM usuarios ORDER BY perfil;
 
 ---
 
-### 6.8 Como Acessar o Servidor (EasyPanel)
+### 6.9 Como Acessar o Servidor (EasyPanel)
 
 O backend está hospedado em **VPS Hostinger** gerenciada pelo **EasyPanel**.
 
@@ -736,7 +817,8 @@ O fluxo de atualização:
 | **2** | Semana 2 | Desenvolvimento dos routers da API (vagas, empresas, candidatos, candidaturas); implementação dos schemas Pydantic; configuração do Alembic para migrações; testes dos endpoints via Swagger UI. |
 | **3** | Semana 3 | Desenvolvimento da interface Streamlit (painel de vagas, detalhe, formulários); implantação inicial na AWS EC2 com Cloudflare Tunnel; publicação no Streamlit Cloud; integração e testes end-to-end. |
 | **4** | Semana 4 | Implementação do dashboard analítico; tela de candidaturas para candidatos; gerenciamento de usuários com proteções de segurança; migração do backend para EasyPanel/VPS Hostinger com Docker e domínio próprio; carga de dados de teste (10 empresas, 20 candidatos, 25 vagas, 109 candidaturas). |
-| **5** | Semana 5 | Substituição da sidebar por navbar horizontal; aplicação de fonte Poppins; adição de campo descrição nas vagas; implementação da visão de candidatos inscritos por vaga para recrutadores; endpoint de atualização de status de candidatura; correções de compatibilidade com tema dark; ajustes de UX mobile; elaboração da documentação ABNT; apresentação final. |
+| **5** | Semana 5 | Substituição da sidebar por navbar horizontal; aplicação de fonte Poppins; adição de campo descrição nas vagas; implementação da visão de candidatos inscritos por vaga para recrutadores; endpoint de atualização de status de candidatura; correções de compatibilidade com tema dark; ajustes de UX mobile. |
+| **6** | Semana 6 | Desenvolvimento e integração do **Assistente por palavras-chave (chatbot)**: estrutura `if/elif/else` com reconhecimento de linguagem natural, botões de atalho rápido, cards de vaga clicáveis com botão "Ver vaga", cobertura de mais de 40 variações de perguntas por categoria; refatoração do backend (correção do constraint CNPJ, seed idempotente, migrate automático de colunas); elaboração da documentação técnica completa em conformidade com ABNT; preparação para apresentação final. |
 
 ---
 
@@ -751,11 +833,12 @@ Entre os principais aprendizados técnicos obtidos durante o desenvolvimento, de
 - Conteinerização de aplicações Python com Docker e gerenciamento via EasyPanel;
 - Configuração de DNS, certificado SSL e proxy reverso via Cloudflare;
 - Resolução de desafios de infraestrutura (compatibilidade passlib/bcrypt, volumes persistentes Docker, variáveis de ambiente por perfil);
-- Desenvolvimento de interfaces web interativas e responsivas com Streamlit (navbar, cards, filtros, dashboard);
+- Desenvolvimento de interfaces web interativas e responsivas com Streamlit (navbar, cards, filtros, dashboard, chatbot);
+- Implementação de assistente por reconhecimento de palavras-chave com cobertura de mais de 40 variações de perguntas por categoria, sem dependência de serviços externos de inteligência artificial generativa;
 - Gerenciamento de fluxo completo de recrutamento: publicação de vaga → candidatura → análise → decisão;
 - Versionamento colaborativo com Git e GitHub com deploy automático.
 
-O sistema encontra-se em plena operação com dados reais de teste, incluindo 10 empresas de renome (Google Brasil, Nubank, Magazine Luiza, Ambev, Hospital Albert Einstein, Itaú Unibanco, iFood, Embraer, Natura &Co, XP Inc.), 25 vagas em diversas modalidades e contratos, 20 candidatos e mais de 109 candidaturas distribuídas estrategicamente para demonstração das métricas do dashboard.
+O sistema encontra-se em plena operação com dados reais de teste, incluindo empresas, vagas em diversas modalidades e contratos, candidatos e mais de 109 candidaturas distribuídas estrategicamente para demonstração das métricas do dashboard.
 
 O sistema pode ser demonstrado ao vivo durante a apresentação em:
 
