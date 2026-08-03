@@ -64,5 +64,13 @@ def delete_empresa(
     empresa = db.query(models.Empresa).filter(models.Empresa.id == id).first()
     if not empresa:
         raise HTTPException(status_code=404, detail="Empresa não encontrada")
+    # remove vagas e seus relacionamentos antes de deletar a empresa
+    vagas = db.query(models.Vaga).filter(models.Vaga.empresa_id == id).all()
+    for vaga in vagas:
+        db.query(models.Candidatura).filter(models.Candidatura.vaga_id == vaga.id).delete()
+        vaga.beneficios.clear()
+        vaga.requisitos.clear()
+        db.delete(vaga)
+    db.flush()
     db.delete(empresa)
     db.commit()
