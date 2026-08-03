@@ -1735,128 +1735,333 @@ def _formatar_vagas(vagas):
     return f"Encontrei **{total}** vaga(s):{footer}"
 
 def _responder_chatbot(pergunta: str) -> str:
+    from collections import Counter
     q = pergunta.lower().strip()
 
-    # ── vagas remotas
-    if any(w in q for w in ["remoto", "remote", "home office", "trabalho remoto"]):
+    # ────────────────────────────────────────────────
+    # SAUDAÇÕES / OI
+    # ────────────────────────────────────────────────
+    if q in ["oi", "olá", "ola", "boa tarde", "bom dia", "boa noite", "hey", "hello", "oi tudo bem", "tudo bem"]:
+        return (
+            "👋 Olá! Sou o assistente da Agência de Empregos.\n\n"
+            "Posso te ajudar com:\n"
+            "- 📋 **Vagas** abertas, remotas, presenciais, híbridas\n"
+            "- 💼 **Contratos** CLT, PJ, Estágio, Temporário\n"
+            "- ♿ **Vagas PcD**\n"
+            "- 📨 **Candidaturas** (pendentes, aprovadas, reprovadas)\n"
+            "- 📊 **Resumo geral** dos dados do sistema\n\n"
+            "O que deseja consultar?"
+        )
+
+    # ────────────────────────────────────────────────
+    # VAGAS ENCERRADAS / FECHADAS
+    # ────────────────────────────────────────────────
+    elif (
+        "encerrada" in q or "encerradas" in q or
+        "fechada" in q or "fechadas" in q or
+        "inativa" in q or "inativas" in q
+    ):
+        vagas = _buscar_vagas({"status": "encerrada"})
+        return _formatar_vagas(vagas) if vagas else "✅ Não há vagas encerradas no momento."
+
+    # ────────────────────────────────────────────────
+    # VAGAS REMOTAS / HOME OFFICE
+    # ────────────────────────────────────────────────
+    elif (
+        "remoto" in q or "remota" in q or "remotas" in q or
+        "home office" in q or "trabalho remoto" in q or
+        "trabalhar de casa" in q or "de casa" in q or
+        "online" in q or "a distância" in q or "a distancia" in q
+    ):
         vagas = _buscar_vagas({"status": "aberta", "modalidade": "remoto"})
         return _formatar_vagas(vagas)
 
-    # ── vagas híbridas
-    if "híbrido" in q or "hibrido" in q:
+    # ────────────────────────────────────────────────
+    # VAGAS HÍBRIDAS
+    # ────────────────────────────────────────────────
+    elif (
+        "híbrido" in q or "hibrido" in q or
+        "híbrida" in q or "hibrida" in q or
+        "semi presencial" in q or "semipresencial" in q
+    ):
         vagas = _buscar_vagas({"status": "aberta", "modalidade": "hibrido"})
         return _formatar_vagas(vagas)
 
-    # ── vagas presenciais
-    if "presencial" in q:
+    # ────────────────────────────────────────────────
+    # VAGAS PRESENCIAIS
+    # ────────────────────────────────────────────────
+    elif (
+        "presencial" in q or "presenciais" in q or
+        "no escritório" in q or "no escritorio" in q or
+        "ir ao escritório" in q or "trabalho presencial" in q
+    ):
         vagas = _buscar_vagas({"status": "aberta", "modalidade": "presencial"})
         return _formatar_vagas(vagas)
 
-    # ── vagas PcD
-    if "pcd" in q or "deficiên" in q or "deficien" in q or "acessib" in q:
+    # ────────────────────────────────────────────────
+    # VAGAS PcD
+    # ────────────────────────────────────────────────
+    elif (
+        "pcd" in q or "pca" in q or
+        "deficiência" in q or "deficiencia" in q or
+        "deficiente" in q or "deficientes" in q or
+        "acessibilidade" in q or "inclusão" in q or "inclusao" in q or
+        "pessoa com deficiência" in q or "portador" in q
+    ):
         vagas = _buscar_vagas({"status": "aberta", "vaga_pcd": True})
         return _formatar_vagas(vagas)
 
-    # ── vagas CLT
-    if "clt" in q:
+    # ────────────────────────────────────────────────
+    # VAGAS CLT
+    # ────────────────────────────────────────────────
+    elif (
+        "clt" in q or
+        "carteira assinada" in q or "carteira de trabalho" in q or
+        "registro em carteira" in q or "com registro" in q or
+        "contrato clt" in q or "vínculo clt" in q
+    ):
         vagas = _buscar_vagas({"status": "aberta", "tipo_contrato": "CLT"})
         return _formatar_vagas(vagas)
 
-    # ── vagas PJ
-    if " pj" in q or q == "pj" or "pessoa jurídica" in q:
+    # ────────────────────────────────────────────────
+    # VAGAS PJ
+    # ────────────────────────────────────────────────
+    elif (
+        q == "pj" or " pj" in q or "pj " in q or
+        "pessoa jurídica" in q or "pessoa juridica" in q or
+        "contrato pj" in q or "trabalho pj" in q or
+        "nota fiscal" in q or "cnpj" in q
+    ):
         vagas = _buscar_vagas({"status": "aberta", "tipo_contrato": "PJ"})
         return _formatar_vagas(vagas)
 
-    # ── estágio
-    if "estágio" in q or "estagio" in q or "estagiário" in q:
+    # ────────────────────────────────────────────────
+    # ESTÁGIO
+    # ────────────────────────────────────────────────
+    elif (
+        "estágio" in q or "estagio" in q or
+        "estagiário" in q or "estagiaria" in q or
+        "estágiario" in q or "estagiar" in q or
+        "vaga de estágio" in q or "oportunidade de estágio" in q
+    ):
         vagas = _buscar_vagas({"status": "aberta", "tipo_contrato": "estagio"})
         return _formatar_vagas(vagas)
 
-    # ── vagas abertas (geral)
-    if any(w in q for w in ["vaga", "vagas", "aberta", "abertas", "disponível", "disponivel", "emprego", "oportunidade"]):
+    # ────────────────────────────────────────────────
+    # TEMPORÁRIO
+    # ────────────────────────────────────────────────
+    elif (
+        "temporário" in q or "temporario" in q or
+        "temporária" in q or "temporaria" in q or
+        "contrato temporário" in q or "trabalho temporário" in q
+    ):
+        vagas = _buscar_vagas({"status": "aberta", "tipo_contrato": "temporario"})
+        return _formatar_vagas(vagas)
+
+    # ────────────────────────────────────────────────
+    # VAGAS ABERTAS — GERAL
+    # ────────────────────────────────────────────────
+    elif (
+        "vaga" in q or "vagas" in q or
+        "aberta" in q or "abertas" in q or
+        "disponível" in q or "disponivel" in q or
+        "disponíveis" in q or "disponiveis" in q or
+        "emprego" in q or "empregos" in q or
+        "oportunidade" in q or "oportunidades" in q or
+        "trabalho" in q or "trabalhos" in q or
+        "posição" in q or "posicao" in q or
+        "posições" in q or "posicoes" in q or
+        "oferta" in q or "ofertas" in q or
+        "cargo" in q or "cargos" in q or
+        "quais são as vagas" in q or "ver vagas" in q or
+        "mostrar vagas" in q or "listar vagas" in q or
+        "tem vaga" in q or "tem vagas" in q or
+        "quero ver vagas" in q or "quero vagas" in q or
+        "que vagas tem" in q or "quais vagas" in q
+    ):
         vagas = _buscar_vagas({"status": "aberta"})
         return _formatar_vagas(vagas)
 
-    # ── candidaturas por status
-    if "aprovad" in q:
+    # ────────────────────────────────────────────────
+    # CANDIDATURAS APROVADAS
+    # ────────────────────────────────────────────────
+    elif (
+        "aprovad" in q or "aprovação" in q or "aprovacao" in q or
+        "fui aprovado" in q or "candidato aprovado" in q
+    ):
         cands = _buscar_candidaturas()
         lista = [c for c in cands if c.get("status") == "aprovado"]
-        nomes = "\n".join(f"- **{c['vaga']['titulo']}** ({c['candidato']['nome']})" for c in lista[:8]) if lista else "_Nenhuma._"
+        if not lista:
+            return "✅ Nenhuma candidatura aprovada no momento."
+        nomes = "\n".join(
+            f"- **{c['vaga']['titulo']}** → {c['candidato']['nome']}"
+            for c in lista[:10]
+        )
         return f"✅ **{len(lista)} candidatura(s) aprovada(s):**\n\n{nomes}"
 
-    if "reprovad" in q:
+    # ────────────────────────────────────────────────
+    # CANDIDATURAS REPROVADAS
+    # ────────────────────────────────────────────────
+    elif (
+        "reprovad" in q or "reprovação" in q or "reprovacao" in q or
+        "rejeitad" in q or "negad" in q
+    ):
         cands = _buscar_candidaturas()
         lista = [c for c in cands if c.get("status") == "reprovado"]
-        return f"❌ **{len(lista)} candidatura(s) reprovada(s).**"
+        if not lista:
+            return "❌ Nenhuma candidatura reprovada no momento."
+        nomes = "\n".join(
+            f"- **{c['vaga']['titulo']}** → {c['candidato']['nome']}"
+            for c in lista[:10]
+        )
+        return f"❌ **{len(lista)} candidatura(s) reprovada(s):**\n\n{nomes}"
 
-    if "análise" in q or "analise" in q or "em análise" in q:
+    # ────────────────────────────────────────────────
+    # CANDIDATURAS EM ANÁLISE
+    # ────────────────────────────────────────────────
+    elif (
+        "análise" in q or "analise" in q or
+        "em análise" in q or "em analise" in q or
+        "sendo analisad" in q or "em avaliação" in q or "em avaliacao" in q
+    ):
         cands = _buscar_candidaturas()
         lista = [c for c in cands if c.get("status") == "em_analise"]
-        nomes = "\n".join(f"- **{c['vaga']['titulo']}** ({c['candidato']['nome']})" for c in lista[:8]) if lista else "_Nenhuma._"
+        if not lista:
+            return "🔍 Nenhuma candidatura em análise no momento."
+        nomes = "\n".join(
+            f"- **{c['vaga']['titulo']}** → {c['candidato']['nome']}"
+            for c in lista[:10]
+        )
         return f"🔍 **{len(lista)} candidatura(s) em análise:**\n\n{nomes}"
 
-    if any(w in q for w in ["pendente", "pendentes"]):
+    # ────────────────────────────────────────────────
+    # CANDIDATURAS PENDENTES
+    # ────────────────────────────────────────────────
+    elif (
+        "pendente" in q or "pendentes" in q or
+        "aguardando" in q or "sem resposta" in q or
+        "não respondida" in q or "nao respondida" in q
+    ):
         cands = _buscar_candidaturas()
         lista = [c for c in cands if c.get("status") == "pendente"]
-        nomes = "\n".join(f"- **{c['vaga']['titulo']}** ({c['candidato']['nome']})" for c in lista[:8]) if lista else "_Nenhuma._"
+        if not lista:
+            return "⏳ Nenhuma candidatura pendente no momento."
+        nomes = "\n".join(
+            f"- **{c['vaga']['titulo']}** → {c['candidato']['nome']}"
+            for c in lista[:10]
+        )
         return f"⏳ **{len(lista)} candidatura(s) pendente(s):**\n\n{nomes}"
 
-    if any(w in q for w in ["candidatura", "candidaturas", "apliquei", "me candidatei", "inscrição", "inscricao"]):
+    # ────────────────────────────────────────────────
+    # CANDIDATURAS — GERAL
+    # ────────────────────────────────────────────────
+    elif (
+        "candidatura" in q or "candidaturas" in q or
+        "inscrição" in q or "inscricao" in q or
+        "inscrições" in q or "inscricoes" in q or
+        "apliquei" in q or "me candidatei" in q or
+        "me inscrevi" in q or "candidatei" in q or
+        "quantas candidaturas" in q or "ver candidaturas" in q or
+        "listar candidaturas" in q or "mostrar candidaturas" in q
+    ):
         cands = _buscar_candidaturas()
         if not cands:
-            return "Nenhuma candidatura encontrada no sistema."
-        from collections import Counter
+            return "📋 Nenhuma candidatura encontrada no sistema."
         contagem = Counter(c.get("status") for c in cands)
         return (
-            f"📋 **Resumo de candidaturas ({len(cands)} total):**\n\n"
+            f"📋 **Resumo de candidaturas — {len(cands)} no total:**\n\n"
             f"- ⏳ Pendentes: **{contagem.get('pendente', 0)}**\n"
             f"- 🔍 Em análise: **{contagem.get('em_analise', 0)}**\n"
             f"- ✅ Aprovadas: **{contagem.get('aprovado', 0)}**\n"
             f"- ❌ Reprovadas: **{contagem.get('reprovado', 0)}**"
         )
 
-    # ── candidatos
-    if any(w in q for w in ["candidato", "candidatos", "quantos candidatos", "pessoas cadastradas"]):
+    # ────────────────────────────────────────────────
+    # CANDIDATOS
+    # ────────────────────────────────────────────────
+    elif (
+        "candidato" in q or "candidatos" in q or
+        "quantos candidatos" in q or "pessoas cadastradas" in q or
+        "pessoas inscritas" in q or "usuários cadastrados" in q or
+        "usuarios cadastrados" in q or "ver candidatos" in q or
+        "listar candidatos" in q or "mostrar candidatos" in q or
+        "quem se cadastrou" in q or "quem se inscreveu" in q
+    ):
         cands = _buscar_candidatos()
-        return f"👤 Há **{len(cands)}** candidato(s) cadastrado(s) no sistema."
+        if not cands:
+            return "👤 Nenhum candidato cadastrado no sistema."
+        nomes = "\n".join(f"- {c['nome']} ({c.get('email','')})" for c in cands[:10])
+        total = len(cands)
+        footer = f"\n\n_Mostrando 10 de {total}._" if total > 10 else ""
+        return f"👤 **{total} candidato(s) cadastrado(s):**\n\n{nomes}{footer}"
 
-    # ── empresas
-    if any(w in q for w in ["empresa", "empresas", "quantas empresas", "parceiros"]):
+    # ────────────────────────────────────────────────
+    # EMPRESAS
+    # ────────────────────────────────────────────────
+    elif (
+        "empresa" in q or "empresas" in q or
+        "quantas empresas" in q or "parceiros" in q or
+        "clientes" in q or "ver empresas" in q or
+        "listar empresas" in q or "mostrar empresas" in q or
+        "quais empresas" in q or "quais são as empresas" in q or
+        "que empresas" in q
+    ):
         emps = _buscar_empresas()
-        nomes = ", ".join(e["nome"] for e in emps[:10])
+        if not emps:
+            return "🏢 Nenhuma empresa cadastrada no sistema."
+        nomes = "\n".join(f"- **{e['nome']}** ({e.get('setor','')}) — {e.get('cidade','')}/{e.get('estado','')}" for e in emps)
         return f"🏢 **{len(emps)} empresa(s) cadastrada(s):**\n\n{nomes}"
 
-    # ── resumo geral / relatório
-    if any(w in q for w in ["resumo", "relatório", "relatorio", "geral", "estatística", "estatistica", "dashboard", "números", "numeros"]):
+    # ────────────────────────────────────────────────
+    # RESUMO GERAL / DADOS / DASHBOARD
+    # ────────────────────────────────────────────────
+    elif (
+        "resumo" in q or "relatório" in q or "relatorio" in q or
+        "geral" in q or "estatística" in q or "estatistica" in q or
+        "estatísticas" in q or "estatisticas" in q or
+        "dashboard" in q or "dados" in q or
+        "números" in q or "numeros" in q or
+        "informações" in q or "informacoes" in q or
+        "quanto tem" in q or "quantos tem" in q or
+        "me mostra tudo" in q or "visão geral" in q or "visao geral" in q or
+        "o que tem no sistema" in q or "o que temos" in q
+    ):
         vagas = _buscar_vagas({"status": "aberta"})
+        vagas_enc = _buscar_vagas({"status": "encerrada"})
         cands = _buscar_candidaturas()
         candidatos = _buscar_candidatos()
         emps = _buscar_empresas()
-        from collections import Counter
         contagem = Counter(c.get("status") for c in cands)
         return (
-            f"📊 **Resumo do sistema:**\n\n"
-            f"- 📋 Vagas abertas: **{len(vagas)}**\n"
-            f"- 🏢 Empresas: **{len(emps)}**\n"
+            f"📊 **Resumo geral do sistema:**\n\n"
+            f"**Vagas**\n"
+            f"- 📋 Abertas: **{len(vagas)}**\n"
+            f"- 🔒 Encerradas: **{len(vagas_enc)}**\n\n"
+            f"**Pessoas**\n"
             f"- 👤 Candidatos: **{len(candidatos)}**\n"
-            f"- 📨 Candidaturas: **{len(cands)}** "
-            f"(✅ {contagem.get('aprovado',0)} aprovadas · "
-            f"⏳ {contagem.get('pendente',0)} pendentes · "
-            f"🔍 {contagem.get('em_analise',0)} em análise)"
+            f"- 🏢 Empresas: **{len(emps)}**\n\n"
+            f"**Candidaturas ({len(cands)} total)**\n"
+            f"- ⏳ Pendentes: **{contagem.get('pendente', 0)}**\n"
+            f"- 🔍 Em análise: **{contagem.get('em_analise', 0)}**\n"
+            f"- ✅ Aprovadas: **{contagem.get('aprovado', 0)}**\n"
+            f"- ❌ Reprovadas: **{contagem.get('reprovado', 0)}**"
         )
 
-    # ── ajuda / menu
-    return (
-        "👋 Olá! Posso te ajudar com:\n\n"
-        "**Vagas:**\n"
-        "- _vagas abertas_ · _vagas remotas_ · _vagas presenciais_ · _vagas híbridas_\n"
-        "- _vagas CLT_ · _vagas PJ_ · _estágio_ · _vagas PcD_\n\n"
-        "**Candidaturas:**\n"
-        "- _candidaturas pendentes_ · _candidaturas aprovadas_ · _candidaturas em análise_\n\n"
-        "**Geral:**\n"
-        "- _resumo geral_ · _quantas empresas_ · _quantos candidatos_\n\n"
-        "💬 Digite sua pergunta ou clique em um atalho abaixo!"
-    )
+    # ────────────────────────────────────────────────
+    # NÃO ENTENDEU
+    # ────────────────────────────────────────────────
+    else:
+        return (
+            "🤔 Não entendi sua pergunta. Tente perguntar sobre:\n\n"
+            "**Vagas:**\n"
+            "› _vagas abertas_ · _vagas remotas_ · _vagas presenciais_ · _vagas híbridas_\n"
+            "› _vagas CLT_ · _vagas PJ_ · _estágio_ · _temporário_ · _vagas PcD_\n\n"
+            "**Candidaturas:**\n"
+            "› _candidaturas pendentes_ · _aprovadas_ · _reprovadas_ · _em análise_\n\n"
+            "**Dados:**\n"
+            "› _resumo geral_ · _quantas empresas_ · _quantos candidatos_\n\n"
+            "Ou use os botões de atalho acima! 👆"
+        )
 
 
 _ATALHOS = [
