@@ -17,7 +17,8 @@ candidatos = [
     {"nome": "Diego Almeida",   "email": "diego.almeida@email.com",   "telefone": "(62) 94444-8888", "cidade": "Goiânia",          "estado": "GO"},
 ]
 
-SENHA_PADRAO = "Senha123!"
+import os, secrets
+SENHA_PADRAO = os.getenv("SEED_SENHA_PADRAO") or secrets.token_urlsafe(12)
 
 for c in candidatos:
     # Registra via /auth/registro (já cria usuario + candidato automaticamente)
@@ -46,4 +47,4 @@ for c in candidatos:
     else:
         print(f"❌ {c['nome']}: {r.status_code} {r.text}")
 
-print("\nSenha de todos: Senha123!")
+print(f"\nSenha usada neste seed: {SENHA_PADRAO}")

@@ -234,12 +234,14 @@ def main():
             empresa_ids.append(None)
 
     # 2. Criar candidatos (registro → pega candidato_id)
-    print("\n👤 Criando candidatos...")
+    import os, secrets as _sec
+    SENHA_CAND = os.getenv("SEED_SENHA_PADRAO") or _sec.token_urlsafe(12)
+    print(f"\n👤 Criando candidatos (senha: {SENHA_CAND})...")
     candidato_ids = []
     for nome, email, tel, cidade, estado in CANDIDATOS:
         # registrar usuário
         r = requests.post(f"{API}/auth/registro", json={
-            "nome": nome, "email": email, "senha": "Senha123!",
+            "nome": nome, "email": email, "senha": SENHA_CAND,
             "telefone": tel, "cidade": cidade, "estado": estado
         })
         if r.status_code in (200, 201):

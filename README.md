@@ -181,7 +181,12 @@ streamlit run streamlit_app.py
 | `ADMIN_EMAIL` | Sim | E-mail do admin criado na primeira inicialização |
 | `ADMIN_SENHA` | Sim | Senha do admin (mín. 8 caracteres) |
 | `ADMIN_NOME` | Não | Nome do admin (padrão: `Admin`) |
+| `EXTRA_ADMIN_EMAIL` | Não | E-mail de um admin extra criado a cada boot (idempotente) |
+| `EXTRA_ADMIN_SENHA` | Não | Senha do admin extra |
+| `EXTRA_ADMIN_NOME` | Não | Nome do admin extra (padrão: `Admin Extra`) |
 | `CORS_ORIGINS` | Não | Origens permitidas separadas por vírgula |
+
+> **Contas de demonstração (recrutadoras):** na primeira inicialização, 9 contas de recrutadora são criadas com senhas geradas aleatoriamente e impressas **uma única vez** no log do container. Para consultá-las: `docker logs <container> | grep "@agencia.com"`. Essas contas são apenas para demonstração — troque as senhas em produção real.
 
 ### Frontend (Streamlit Cloud secrets)
 
